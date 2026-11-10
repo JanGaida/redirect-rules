@@ -1,0 +1,16 @@
+# MARK: gitleaks — config for the CI `secret scan` job
+
+# * The default ruleset stays enabled; this file only allowlists a known false
+# * positive: the 16-hex loop-key fixture in the watcher test, which gitleaks
+# * reads as a `generic-api-key`.
+# ! Keep this list minimal — every entry weakens the scan it configures.
+
+title = "redirect-rules"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Loop-key hash fixture in the watcher test, not a credential"
+regexTarget = "secret"
+regexes = ['''^0123456789abcdef$''']
