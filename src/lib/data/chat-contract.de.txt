@@ -1,0 +1,26 @@
+## Regel-Modell
+
+Regex als `/muster/flags` oder als einfaches Muster ohne Slashes notieren. Regeln laufen in der
+Reihenfolge des `rules`-Arrays; jede Regel sieht die Ausgabe der vorherigen.
+
+| `kind` | Felder | Verhalten |
+| --- | --- | --- |
+| `replace` | `regex`, `substitution` | Ersetzt Treffer im aktuellen URL-String. `substitution` unterstützt `$1`…`$9` (Capture-Gruppe), `$&` (ganzer Treffer) und `$$` (echtes `$`). Mit Flag `g` alle Treffer, ohne `g` nur der erste. |
+| `appendQuery` | `params`, optional `regex` | Hängt `k=v&k2=v2` fragment-sicher an; vorhandene Keys werden an Ort und Stelle überschrieben. Optionales `regex`-Gate wird gegen die dekodierte Query getestet. |
+| `removeQuery` | `keys`, optional `regex` | Entfernt Query-Parameter; `*` am Ende ist ein Präfix-Wildcard, alle Treffer inklusive Duplikate werden entfernt. Optionales `regex`-Gate gegen die dekodierte Query. |
+| `checkpoint` | `regex`, `mode` | Ändert die URL nie. `mode: "continue"` lässt die restlichen Regeln nur bei Treffer zu, `mode: "stop"` bricht sie bei Treffer ab. `regex` prüft die aktuelle URL. |
+
+## Testfälle (Pflicht)
+
+- Lege für JEDEN Regel-Typ, den du verwendest, genau einen `previewEntries`-Eintrag an — je Regel-Typ, nicht je Regel.
+- `url` ist eine echte Eingabe-URL, auf die das `siteRegex`-Gate matcht.
+- `testOutputUri` ist das erwartete Ergebnis, nachdem die GESAMTE Regelkette der Gruppe auf `url` angewendet wurde.
+- `description` nennt den Regel-Typ des Eintrags; die Einträge folgen der Reihenfolge der Regel-Typen in `rules`.
+- Verwende nur URLs aus der Aufgabe oder aus der Ziel-Gruppe. Erfinde NIE eine URL.
+- Gibt es für einen Regel-Typ keine exakte Beispiel-URL, setze `url` und `testOutputUri` auf `""` und schreibe in `description` exakt diesen Satz:
+  Es gibt keine exakte Beispiel-URL, anhand derer sich das gewünschte Verhalten überprüfen ließe.
+
+## Selbstprüfung
+
+Prüfe vor der Ausgabe: genau ein JSON-Objekt ohne Begleittext; jede Regel nur mit den Feldern ihres Typs;
+ein Testfall je verwendetem Regel-Typ, keine erfundene URL.

@@ -1,0 +1,24 @@
+# Redirect Rules — Repair
+
+## Task
+
+The following answer was meant to be an importable JSON configuration for the "Redirect Rules"
+userscript (Tampermonkey); the import failed. Repair it and change only what fixes the error.
+
+## Reported error
+
+{error}
+
+## Original answer
+
+{input}
+
+{{include:chat-contract.en}}
+
+## Output format (binding)
+
+- Reply with EXACTLY ONE corrected JSON object — no text before or after it, no Markdown, no code
+  fences, no comments.
+- Shape: `{"siteRegex": "…", "rules": [ … ], "previewEntries": [ … ]}`.
+- `siteRegex` must be a valid, non-empty regex.
+- Preserve the intent of the original answer: do not invent rules or requirements that are not in it.

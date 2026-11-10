@@ -1,0 +1,25 @@
+# Redirect Rules — Reparatur
+
+## Aufgabe
+
+Die folgende Antwort sollte eine importierbare JSON-Konfiguration für das Userscript „Redirect Rules“
+(Tampermonkey) sein; der Import ist fehlgeschlagen. Repariere sie und ändere nur, was den Fehler behebt.
+
+## Gemeldeter Fehler
+
+{error}
+
+## Ursprüngliche Antwort
+
+{input}
+
+{{include:chat-contract.de}}
+
+## Ausgabeformat (verbindlich)
+
+- Antworte mit GENAU EINEM korrigierten JSON-Objekt — ohne Text davor oder danach, ohne Markdown,
+  ohne Code-Fences, ohne Kommentare.
+- Form: `{"siteRegex": "…", "rules": [ … ], "previewEntries": [ … ]}`.
+- `siteRegex` muss eine gültige, nicht leere Regex sein.
+- Erhalte die Absicht der ursprünglichen Antwort: erfinde keine Regeln oder Anforderungen, die dort
+  nicht stehen.

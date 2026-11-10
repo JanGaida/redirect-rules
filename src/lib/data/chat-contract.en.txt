@@ -1,0 +1,26 @@
+## Rule model
+
+Write regexes as `/pattern/flags` or as a plain pattern without slashes. Rules run in `rules` order;
+each rule sees the output of the previous one.
+
+| `kind` | Fields | Behavior |
+| --- | --- | --- |
+| `replace` | `regex`, `substitution` | Replaces matches in the current URL string. `substitution` supports `$1`…`$9` (capture group), `$&` (whole match) and `$$` (literal `$`). With flag `g` all matches, without `g` only the first. |
+| `appendQuery` | `params`, optional `regex` | Appends `k=v&k2=v2`, fragment-safe; existing keys are overwritten in place. An optional `regex` gate is tested against the decoded query. |
+| `removeQuery` | `keys`, optional `regex` | Removes query params; a trailing `*` is a prefix wildcard, all matches (duplicates included) are removed. An optional `regex` gate is tested against the decoded query. |
+| `checkpoint` | `regex`, `mode` | Never changes the URL. `mode: "continue"` allows the remaining rules only on a match, `mode: "stop"` aborts them on a match. `regex` tests the current URL. |
+
+## Test cases (required)
+
+- Add exactly one `previewEntries` entry for EVERY rule kind you use — per rule kind, not per rule.
+- `url` is a real input URL that matches the `siteRegex` gate.
+- `testOutputUri` is the expected result after the WHOLE rule chain of the group has been applied to `url`.
+- `description` names the rule kind of the entry; the entries follow the order of the rule kinds in `rules`.
+- Use only URLs from the task or from the target group. NEVER invent a URL.
+- If no exact example URL exists for a rule kind, set `url` and `testOutputUri` to `""` and put EXACTLY this text in `description`:
+  There is no exact example URL against which the desired behavior could be verified.
+
+## Self-check
+
+Before answering, verify: exactly one JSON object with no surrounding text; every rule carries only its
+kind's fields; one test case per used rule kind, with no invented URL.

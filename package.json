@@ -1,0 +1,73 @@
+{
+    "name": "redirect-rules",
+    "description": "Regex-based URL rewriter/redirector with a rule editor GUI.",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+    },
+    "license": "GPL-3.0",
+    "author": "Jan Gaida",
+    "homepage": "https://github.com/JanGaida/redirect-rules#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/JanGaida/redirect-rules.git"
+    },
+    "bugs": {
+        "url": "https://github.com/JanGaida/redirect-rules/issues"
+    },
+    "keywords": [
+        "userscript",
+        "tampermonkey",
+        "redirect",
+        "regex",
+        "svelte"
+    ],
+    "scripts": {
+        "dev": "vite",
+        "dev:certs": "node scripts/install-dev-certs.mjs",
+        "dev:gui": "vite --mode gui",
+        "build": "cross-env NODE_ENV=production vite build",
+        "build:dev": "cross-env RR_DEV=1 vite build",
+        "build:prod": "cross-env NODE_ENV=production vite build",
+        "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "screenshots": "playwright test --config playwright.screenshots.config.ts",
+        "docs:check": "node scripts/check-docs.mjs",
+        "docs:index": "node scripts/gen-docs-index.mjs",
+        "release:check": "node scripts/check-release-config.mjs",
+        "comments:check": "node scripts/check-comments.mjs",
+        "css:check": "node scripts/check-css.mjs",
+        "i18n:gen": "node scripts/gen-i18n-keys.mjs",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "open:install:dev": "node scripts/open-tampermonkey-install.mjs dist/redirect-rules.dev.user.js",
+        "open:install:prod": "node scripts/open-tampermonkey-install.mjs dist/redirect-rules.user.js",
+        "install:dev": "npm run build:dev && npm run open:install:dev",
+        "install:prod": "npm run build:prod && npm run open:install:prod"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.62.1",
+        "@sveltejs/vite-plugin-svelte": "^7.1.1",
+        "@tsconfig/svelte": "^5.0.8",
+        "@types/debug": "^4.1.13",
+        "@types/node": "^26.1.2",
+        "cross-env": "^10.1.0",
+        "esbuild": "^0.28.2",
+        "jsdom": "^29.1.1",
+        "prettier": "^3.9.6",
+        "prettier-plugin-svelte": "^4.1.1",
+        "svelte": "^5.55.5",
+        "svelte-check": "^4.4.8",
+        "terser": "^5.51.2",
+        "typescript": "^6.0.3",
+        "vite": "^8.0.11",
+        "vite-plugin-mkcert": "^2.1.0",
+        "vite-plugin-monkey": "^8.0.0",
+        "vitest": "^4.1.10"
+    }
+}

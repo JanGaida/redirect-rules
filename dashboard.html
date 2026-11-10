@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Redirect Rules - Dev Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css" />
+        <style>
+            :root {
+                --rr-font: "Hack", "Hack Mono", "DejaVu Sans Mono", "Consolas", "Monaco", ui-monospace, monospace;
+            }
+            body {
+                margin: 0;
+                min-height: 100vh;
+                background: #0f172a;
+                color: #f8fafc;
+                font-family: var(--rr-font);
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app"></div>
+        <script>
+            // * Polyfill GM_* only when Tampermonkey is NOT present — in a real TM
+            // * session the real GM storage (incl. persisted prod/dev settings) stays
+            // * authoritative. Otherwise this would mask the genuine settings object.
+            if (typeof window.GM_getValue !== "function") {
+                (function () {
+                    var memory = {};
+                    window.GM_getValue = function (key, def) {
+                        try {
+                            var raw = localStorage.getItem("rrGM_" + key);
+                            if (raw !== null) return JSON.parse(raw);
+                        } catch (e) {}
+                        return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def;
+                    };
+                    window.GM_setValue = function (key, val) {
+                        memory[key] = val;
+                        try {
+                            localStorage.setItem("rrGM_" + key, JSON.stringify(val));
+                        } catch (e) {}
+                    };
+                    window.GM_deleteValue = function (key) {
+                        delete memory[key];
+                        try {
+                            localStorage.removeItem("rrGM_" + key);
+                        } catch (e) {}
+                    };
+                    window.GM_listValues = function () {
+                        return Object.keys(memory);
+                    };
+                    window.GM_info = {
+                        version: "dev",
+                        scriptHandler: "dev",
+                        script: {
+                            name: "Redirect Rules",
+                            namespace: "https://github.com/JanGaida/redirect-rules",
+                            version: "dev",
+                            author: "dev",
+                        },
+                    };
+                    window.__gmCommands = [];
+                    window.GM_registerMenuCommand = function (label, fn) {
+                        window.__gmCommands.push({ label: label, fn: fn });
+                    };
+                    window.GM_openInTab = function (url) {
+                        var win = window.open(url, "_blank");
+                        return win || { close: function () {}, closed: false, onclose: null };
+                    };
+                    window.__gmValueListeners = [];
+                    window.GM_addValueChangeListener = function () {
+                        return window.__gmValueListeners.length + 1;
+                    };
+                    window.GM_setClipboard = function (text) {
+                        try {
+                            navigator.clipboard.writeText(text).catch(function () {});
+                        } catch (e) {}
+                    };
+                    window.alert = function () {};
+                })();
+            }
+        </script>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>

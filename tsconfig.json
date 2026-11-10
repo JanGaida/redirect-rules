@@ -1,0 +1,30 @@
+{
+    "extends": "@tsconfig/svelte/tsconfig.json",
+    "compilerOptions": {
+        "target": "ESNext",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "resolveJsonModule": true,
+        // * node types needed for the test harness + e2e helpers (node:fs/path/http);
+        //   the app code itself never uses node globals (userscript context).
+        "types": ["node"],
+        /**
+         * Typecheck JS in `.svelte` and `.js` files by default.
+         * Disable checkJs if you'd like to use dynamic types in JS.
+         * Note that setting allowJs false does not prevent the use
+         * of JS in `.svelte` files.
+         */
+        "allowJs": true,
+        "checkJs": true,
+        // ! noEmit is REQUIRED: without it a plain `tsc` run emits vite.config.js /
+        // vitest.config.js next to the .ts originals — and Vite loads the STALE .js
+        // with priority over vite.config.ts, silently ignoring config edits.
+        "noEmit": true
+    },
+    "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "e2e/screenshots/**/*.ts"],
+    "references": [
+        {
+            "path": "./tsconfig.node.json"
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+dist
+node_modules
+*.user.js
+*.min.js
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+tsconfig.node.tsbuildinfo
+.kilo
+.tsbuild-node
+e2e/**/*.js
+e2e/**/*.d.ts
+playwright.config.js
+playwright.config.d.ts
+vitest.config.js
+vitest.config.d.ts
+# Playwright artifacts (generated, gitignored)
+test-results/
+playwright-report/
+.playwright/
+CHANGELOG.md
+.release-please-manifest.json

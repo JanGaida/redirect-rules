@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "types": ["node", "@playwright/test"],
+        // ! Node's native Vite config loader needs explicit `.ts` extensions;
+        //   rewrite them to `.js` in emitted output.
+        "rewriteRelativeImportExtensions": true,
+        "outDir": ".tsbuild-node",
+        "tsBuildInfoFile": ".tsbuild-node/tsconfig.node.tsbuildinfo"
+    },
+    "include": [
+        "vite.config.ts",
+        "vitest.config.ts",
+        "playwright.config.ts",
+        "playwright.screenshots.config.ts",
+        "scripts/build-defines.ts",
+        "e2e/**/*.ts"
+    ],
+    // * The capture spec imports app code (seed helpers) — typechecked by the
+    // * Svelte project instead, which owns src and its DOM/GM ambient types.
+    "exclude": ["e2e/screenshots"]
+}

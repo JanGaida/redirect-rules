@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css" />
+        <link rel="icon" type="image/svg+xml" sizes="any" href="/assets/icons/app/icon.svg" />
+        <title>Dev Console</title>
+        <style>
+            /* * Token contract: keep in sync with src/lib/gui/dashboard.css.
+               The dev center is a standalone Vite page, so the values are
+               duplicated rather than shared through the userscript bundle. */
+            :root {
+                color-scheme: dark;
+                --rr-bg: #0d0f13;
+                --rr-panel: #14171d;
+                --rr-pane: #0a0c10;
+                --rr-chrome: #1a2029;
+                --rr-border: #262b35;
+                --rr-border-strong: #39404d;
+                --rr-text: #e3e7ee;
+                --rr-muted: #98a0ad;
+                --rr-faint: #78818f;
+                --rr-accent: #3b82f6;
+                --rr-accent-soft: rgba(59, 130, 246, 0.15);
+                --rr-brand: #3b82f6;
+                --rr-brand-soft: rgba(59, 130, 246, 0.15);
+                --rr-ring: rgba(59, 130, 246, 0.45);
+                --rr-ok: #4fae68;
+                --rr-ok-soft: rgba(62, 207, 142, 0.14);
+                --rr-danger: #f5615c;
+                --rr-danger-soft: rgba(245, 97, 92, 0.14);
+                --rr-radius: 10px;
+                --rr-radius-sm: 7px;
+                --rr-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+                --rr-btn-line: #4c576b;
+                --rr-fs-xs: 11px;
+                --rr-fs-sm: 12px;
+                --rr-fs-md: 14px;
+                --rr-fs-lg: 18px;
+                --rr-font: "Hack", "Hack Mono", "DejaVu Sans Mono", "Consolas", "Monaco", ui-monospace, monospace;
+            }
+
+            @media (prefers-color-scheme: light) {
+                :root {
+                    color-scheme: light;
+                    --rr-bg: #dde2eb;
+                    --rr-panel: #f7f8fb;
+                    --rr-pane: #ccd3e0;
+                    --rr-chrome: #ccd4e0;
+                    --rr-border: #bcc4d2;
+                    --rr-border-strong: #8e99ad;
+                    --rr-text: #14171e;
+                    --rr-muted: #465062;
+                    --rr-faint: #626d7e;
+                    --rr-accent: #1d4ed8;
+                    --rr-accent-soft: rgba(29, 78, 216, 0.16);
+                    --rr-ring: rgba(29, 78, 216, 0.4);
+                    --rr-ok: #276b40;
+                    --rr-ok-soft: rgba(20, 122, 80, 0.14);
+                    --rr-danger: #b93a35;
+                    --rr-danger-soft: rgba(185, 58, 53, 0.14);
+                    --rr-shadow: 0 1px 2px rgba(15, 22, 40, 0.1), 0 6px 20px rgba(15, 22, 40, 0.09);
+                    --rr-btn-line: #7e8aa0;
+                }
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            [hidden] {
+                display: none !important;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                padding: 32px 24px;
+                background: var(--rr-bg);
+                color: var(--rr-text);
+                font: var(--rr-fs-md)/1.5 var(--rr-font);
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+            }
+
+            .console {
+                width: 100%;
+                max-width: 1000px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            /* ─── MARK: Hero ─────────────────────────────────────────────────── */
+
+            .hero {
+                position: relative;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 20px 24px;
+                align-items: center;
+                padding: 24px 26px;
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius);
+                background:
+                    radial-gradient(120% 140% at 88% 0%, var(--rr-brand-soft), transparent 62%), var(--rr-panel);
+                box-shadow:
+                    var(--rr-shadow),
+                    inset 0 1px 0 var(--rr-brand-soft);
+            }
+
+            .hero-copy {
+                min-width: 0;
+            }
+
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                width: fit-content;
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                background: var(--rr-accent-soft);
+                color: var(--rr-accent);
+                font: 700 var(--rr-fs-xs) / 1.2 var(--rr-font);
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            h1 {
+                margin: 10px 0 0;
+                font: 600 clamp(22px, 3vw, 28px) / 1.2 var(--rr-font);
+                letter-spacing: -0.02em;
+                color: var(--rr-text);
+            }
+
+            .hero-tagline {
+                max-width: 62ch;
+                margin: 6px 0 0;
+                color: var(--rr-muted);
+                font-size: var(--rr-fs-md);
+                line-height: 1.5;
+            }
+
+            .hero-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 3px 9px;
+                border: 1px solid var(--rr-border);
+                border-radius: 999px;
+                background: var(--rr-chrome);
+                color: var(--rr-muted);
+                font: 700 var(--rr-fs-xs) / 1.4 var(--rr-font);
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            .chip--accent {
+                border-color: var(--rr-ring);
+                background: var(--rr-brand-soft);
+                color: var(--rr-text);
+            }
+
+            .hero-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+            /* ─── MARK: Cards ────────────────────────────────────────────────── */
+
+            .card {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius);
+                background: var(--rr-panel);
+                box-shadow: var(--rr-shadow);
+            }
+
+            .card-head {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--rr-border);
+            }
+
+            .card-head h2 {
+                margin: 0;
+                color: var(--rr-faint);
+                font-size: var(--rr-fs-xs);
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            .card-actions {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-left: auto;
+            }
+
+            .card-body {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                padding: 16px;
+            }
+
+            /* ─── MARK: Artifacts ────────────────────────────────────────────── */
+
+            .artifact-list {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .artifact {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 14px 16px;
+                border-top: 1px solid var(--rr-border);
+            }
+
+            .artifact:first-child {
+                border-top: 0;
+            }
+
+            .artifact-main {
+                display: flex;
+                flex: 1;
+                align-items: flex-start;
+                gap: 10px;
+                min-width: 0;
+            }
+
+            .artifact-name {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+                min-width: 0;
+            }
+
+            .artifact-name h3 {
+                margin: 0;
+                font-size: var(--rr-fs-md);
+                font-weight: 700;
+            }
+
+            .artifact-name code {
+                color: var(--rr-muted);
+                font: var(--rr-fs-xs) / 1.4 var(--rr-font);
+                overflow-wrap: anywhere;
+            }
+
+            .artifact-meta {
+                margin: 0;
+                color: var(--rr-muted);
+                font-size: var(--rr-fs-sm);
+            }
+
+            .artifact-actions {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+
+            .artifact-hint {
+                color: var(--rr-faint);
+                font-size: var(--rr-fs-xs);
+            }
+
+            .artifact-hint code {
+                padding: 1px 5px;
+                border: 1px solid var(--rr-border);
+                border-radius: 5px;
+                background: var(--rr-chrome);
+                color: var(--rr-muted);
+            }
+
+            .dot {
+                flex: none;
+                width: 8px;
+                height: 8px;
+                margin-top: 5px;
+                border-radius: 50%;
+                background: var(--rr-faint);
+            }
+
+            .dot--ok {
+                background: var(--rr-ok);
+                box-shadow: 0 0 0 3px var(--rr-ok-soft);
+            }
+
+            .dot--missing {
+                background: var(--rr-danger);
+                box-shadow: 0 0 0 3px var(--rr-danger-soft);
+            }
+
+            /* ─── MARK: Storage ──────────────────────────────────────────────── */
+
+            .storage-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+                gap: 14px;
+            }
+
+            .json-panel {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                overflow: hidden;
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius-sm);
+                background: var(--rr-pane);
+            }
+
+            .json-head {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                /* * 28px control + 2x8px padding + 1px border — keeps both panels level. */
+                min-height: 45px;
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--rr-border);
+                background: var(--rr-chrome);
+            }
+
+            .json-head h3 {
+                margin: 0;
+                color: var(--rr-faint);
+                font-size: var(--rr-fs-xs);
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+
+            .json-head .size {
+                color: var(--rr-faint);
+                font-size: var(--rr-fs-xs);
+            }
+
+            .json-head .spacer {
+                flex: 1;
+            }
+
+            .json-summary {
+                margin: 0;
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--rr-border);
+                color: var(--rr-muted);
+                font-size: var(--rr-fs-xs);
+                line-height: 1.5;
+            }
+
+            .json-body {
+                min-height: 80px;
+                margin: 0;
+                padding: 12px;
+                overflow: auto;
+                color: var(--rr-text);
+                font: var(--rr-fs-xs) / 1.55 var(--rr-font);
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+                tab-size: 4;
+            }
+
+            .json-body--settings {
+                max-height: 360px;
+            }
+
+            .json-body--stats {
+                max-height: 220px;
+            }
+
+            .json-body.is-empty,
+            .json-body.is-invalid {
+                color: var(--rr-muted);
+            }
+
+            .key-list {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius-sm);
+            }
+
+            .key-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 110px auto;
+                gap: 12px;
+                align-items: center;
+                padding: 8px 12px;
+                border-top: 1px solid var(--rr-border);
+                font-size: var(--rr-fs-sm);
+            }
+
+            .key-row:first-child {
+                border-top: 0;
+            }
+
+            .key-name {
+                overflow-wrap: anywhere;
+            }
+
+            .key-name code {
+                color: var(--rr-muted);
+            }
+
+            .key-size {
+                color: var(--rr-muted);
+                font-variant-numeric: tabular-nums;
+                text-align: right;
+            }
+
+            .key-actions {
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .storage-note {
+                margin: 0;
+                color: var(--rr-muted);
+                font-size: var(--rr-fs-xs);
+                line-height: 1.6;
+            }
+
+            .storage-note code {
+                color: var(--rr-text);
+            }
+
+            /* ─── MARK: Icons ────────────────────────────────────────────────── */
+
+            .rr-icon {
+                display: inline-flex;
+                flex: none;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .rr-icon svg {
+                display: block;
+                width: 15px;
+                height: 15px;
+                fill: currentColor;
+            }
+
+            .btn .rr-icon svg,
+            .chip .rr-icon svg,
+            .status .rr-icon svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .card-head h2,
+            .json-head h3,
+            .artifact-name h3,
+            .key-name {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            /* ─── MARK: Buttons & Status ─────────────────────────────────────── */
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                min-height: 32px;
+                padding: 6px 12px;
+                font: 500 13.5px/1.5 var(--rr-font);
+                color: var(--rr-muted);
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius-sm);
+                background: transparent;
+                cursor: pointer;
+                transition:
+                    border-color 0.12s,
+                    background 0.12s,
+                    color 0.12s;
+                text-decoration: none;
+            }
+
+            .btn:hover {
+                background: var(--rr-panel);
+                border-color: var(--rr-border-strong);
+                color: var(--rr-text);
+            }
+
+            .btn--primary {
+                color: var(--rr-accent);
+                border-color: var(--rr-brand);
+                background: var(--rr-brand-soft);
+            }
+
+            .btn--primary:hover {
+                background: var(--rr-brand-soft);
+                border-color: var(--rr-brand);
+                color: var(--rr-accent);
+            }
+
+            .btn--danger {
+                color: var(--rr-danger);
+                border-color: var(--rr-btn-line);
+            }
+
+            .btn--danger:hover {
+                background: var(--rr-danger-soft);
+                border-color: var(--rr-danger);
+                color: var(--rr-danger);
+            }
+
+            .btn--sm {
+                min-height: 28px;
+                padding: 3px 9px;
+                font-size: var(--rr-fs-xs);
+            }
+
+            .btn:focus-visible {
+                outline: none;
+                box-shadow:
+                    0 0 0 3px var(--rr-accent-soft),
+                    0 0 0 1px var(--rr-accent);
+            }
+
+            .btn:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+
+            .status {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 34px;
+                padding: 8px 14px;
+                border: 1px solid var(--rr-border);
+                border-radius: var(--rr-radius-sm);
+                background: var(--rr-chrome);
+                color: var(--rr-muted);
+                font-size: var(--rr-fs-xs);
+                letter-spacing: 0.02em;
+            }
+
+            @media (max-width: 760px) {
+                body {
+                    padding: 16px;
+                }
+
+                .hero {
+                    grid-template-columns: 1fr;
+                    padding: 20px;
+                }
+
+                .hero-actions {
+                    justify-content: flex-start;
+                }
+
+                .storage-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .artifact {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .artifact-actions {
+                    justify-content: flex-start;
+                }
+
+                .key-row {
+                    grid-template-columns: minmax(0, 1fr) 90px auto;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="console">
+            <header class="hero">
+                <div class="hero-copy">
+                    <span class="badge">
+                        <span class="rr-icon" data-icon="terminalAdd" aria-hidden="true"></span>
+                        LOCAL DEV ENVIRONMENT
+                    </span>
+                    <h1>redirect-rules :: dev console</h1>
+                    <p class="hero-tagline">Local control center for HMR, the GM storage mirror, and the dashboard.</p>
+                    <div class="hero-meta" aria-label="Development metadata">
+                        <span class="chip chip--accent">
+                            <span class="rr-icon" data-icon="bolt" aria-hidden="true"></span>
+                            Vite serve
+                        </span>
+                        <span class="chip" id="meta-origin">
+                            <span class="rr-icon" data-icon="link" aria-hidden="true"></span>
+                            <span id="meta-origin-text">127.0.0.1:5173</span>
+                        </span>
+                        <span class="chip">
+                            <span class="rr-icon" data-icon="modeHeat" aria-hidden="true"></span>
+                            RR_DEV · HMR
+                        </span>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <button class="btn btn--primary" id="open-dashboard" type="button">
+                        <span class="rr-icon" data-icon="dashboard" aria-hidden="true"></span>
+                        Open dashboard
+                    </button>
+                </div>
+            </header>
+
+            <section class="card" aria-labelledby="artifacts-title">
+                <header class="card-head">
+                    <h2 id="artifacts-title">
+                        <span class="rr-icon" data-icon="build" aria-hidden="true"></span>
+                        Artifacts
+                    </h2>
+                    <div class="card-actions">
+                        <button class="btn btn--sm" id="refresh-artifacts" type="button">
+                            <span class="rr-icon" data-icon="autorenew" aria-hidden="true"></span>
+                            Refresh
+                        </button>
+                    </div>
+                </header>
+                <div class="artifact-list">
+                    <article class="artifact" aria-labelledby="artifact-dev-name">
+                        <div class="artifact-main">
+                            <span class="dot" id="artifact-dev-dot" aria-hidden="true"></span>
+                            <div class="artifact-name">
+                                <h3 id="artifact-dev-name">
+                                    <span class="rr-icon" data-icon="terminalAdd" aria-hidden="true"></span>
+                                    Dev build
+                                </h3>
+                                <code>dist/redirect-rules.dev.user.js</code>
+                                <p class="artifact-meta" id="artifact-dev-meta">checking…</p>
+                            </div>
+                        </div>
+                        <div class="artifact-actions">
+                            <a class="btn btn--primary btn--sm" id="artifact-dev-install" href="#" hidden>
+                                <span class="rr-icon" data-icon="download" aria-hidden="true"></span>
+                                Install
+                            </a>
+                            <span class="artifact-hint" id="artifact-dev-hint">
+                                Run <code>npm run build:dev</code>
+                            </span>
+                        </div>
+                    </article>
+                    <article class="artifact" aria-labelledby="artifact-prod-name">
+                        <div class="artifact-main">
+                            <span class="dot" id="artifact-prod-dot" aria-hidden="true"></span>
+                            <div class="artifact-name">
+                                <h3 id="artifact-prod-name">
+                                    <span class="rr-icon" data-icon="bolt" aria-hidden="true"></span>
+                                    Prod build
+                                </h3>
+                                <code>dist/redirect-rules.user.js</code>
+                                <p class="artifact-meta" id="artifact-prod-meta">checking…</p>
+                            </div>
+                        </div>
+                        <div class="artifact-actions">
+                            <a class="btn btn--primary btn--sm" id="artifact-prod-install" href="#" hidden>
+                                <span class="rr-icon" data-icon="download" aria-hidden="true"></span>
+                                Install
+                            </a>
+                            <span class="artifact-hint" id="artifact-prod-hint"> Run <code>npm run build</code> </span>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="card" aria-labelledby="storage-title">
+                <header class="card-head">
+                    <h2 id="storage-title">
+                        <span class="rr-icon" data-icon="database" aria-hidden="true"></span>
+                        Dev storage
+                    </h2>
+                    <div class="card-actions">
+                        <button class="btn btn--sm" id="refresh-storage" type="button">
+                            <span class="rr-icon" data-icon="autorenew" aria-hidden="true"></span>
+                            Refresh
+                        </button>
+                        <button class="btn btn--sm" id="load-prod-settings" type="button">
+                            <span class="rr-icon" data-icon="upload" aria-hidden="true"></span>
+                            Load prod settings
+                        </button>
+                        <button class="btn btn--sm btn--danger" id="reset-dev-settings" type="button">
+                            <span class="rr-icon" data-icon="settingsBackupRestore" aria-hidden="true"></span>
+                            Reset all
+                        </button>
+                        <input id="prod-settings-file" type="file" accept="application/json,.json" hidden />
+                    </div>
+                </header>
+                <div class="card-body">
+                    <div class="storage-grid">
+                        <article class="json-panel" aria-labelledby="settings-title">
+                            <header class="json-head">
+                                <h3 id="settings-title">
+                                    <span class="rr-icon" data-icon="settings" aria-hidden="true"></span>
+                                    settings
+                                </h3>
+                                <span class="size" id="settings-size"></span>
+                                <span class="spacer"></span>
+                                <button class="btn btn--sm" id="settings-copy" type="button" disabled>
+                                    <span class="rr-icon" data-icon="contentCopy" aria-hidden="true"></span>
+                                    Copy
+                                </button>
+                            </header>
+                            <p class="json-summary" id="settings-summary">No dev settings loaded.</p>
+                            <pre class="json-body json-body--settings" id="settings-json" tabindex="0"></pre>
+                        </article>
+                        <article class="json-panel" aria-labelledby="stats-title">
+                            <header class="json-head">
+                                <h3 id="stats-title">
+                                    <span class="rr-icon" data-icon="queryStats" aria-hidden="true"></span>
+                                    stats
+                                </h3>
+                                <span class="size" id="stats-size"></span>
+                            </header>
+                            <p class="json-summary" id="stats-summary">No dev stats loaded.</p>
+                            <pre class="json-body json-body--stats" id="stats-json" tabindex="0"></pre>
+                        </article>
+                    </div>
+                    <div class="key-list" id="storage-keys" aria-label="Dev storage keys"></div>
+                    <p class="storage-note" id="storage-unknown"></p>
+                    <p class="storage-note">
+                        Read-only mirror of <code>localStorage</code> keys <code>rrGM_*</code>. Tampermonkey’s GM
+                        storage is not reachable from this page.
+                    </p>
+                </div>
+            </section>
+
+            <div class="status" role="status" aria-live="polite">
+                <span class="rr-icon" data-icon="info" aria-hidden="true"></span>
+                <span id="dev-settings-status">Ready</span>
+            </div>
+        </main>
+
+        <script>
+            const GM_PREFIX = "rrGM_";
+            const KNOWN_KEYS = ["settings", "stats", "dashboard-request"];
+            const KEY_ICONS = { settings: "settings", stats: "queryStats", "dashboard-request": "tab" };
+            const ARTIFACTS = {
+                dev: { file: "redirect-rules.dev.user.js" },
+                prod: { file: "redirect-rules.user.js" },
+            };
+
+            const statusEl = document.getElementById("dev-settings-status");
+
+            // * Status line shared by storage, artifact and clipboard actions.
+            function setStatus(message) {
+                if (statusEl !== null) statusEl.textContent = message;
+            }
+
+            function isRecord(value) {
+                return typeof value === "object" && value !== null && !Array.isArray(value);
+            }
+
+            // * Reads the localStorage mirror used by dashboard.html's GM polyfill.
+            function readDevValue(key) {
+                try {
+                    const raw = localStorage.getItem(GM_PREFIX + key);
+                    if (raw === null) return { present: false, raw: "", value: undefined, invalid: false };
+                    try {
+                        return { present: true, raw, value: JSON.parse(raw), invalid: false };
+                    } catch {
+                        return { present: true, raw, value: undefined, invalid: true };
+                    }
+                } catch {
+                    return { present: false, raw: "", value: undefined, invalid: false, unavailable: true };
+                }
+            }
+
+            function prettyJson(value) {
+                if (value === undefined) return "";
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch {
+                    return String(value);
+                }
+            }
+
+            function formatBytes(bytes) {
+                if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) return "—";
+                if (bytes < 1024) return `${bytes} B`;
+                const units = ["KB", "MB", "GB"];
+                let value = bytes / 1024;
+                let unit = 0;
+                while (value >= 1024 && unit < units.length - 1) {
+                    value /= 1024;
+                    unit += 1;
+                }
+                return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
+            }
+
+            function formatWhen(value) {
+                if (!value) return "time unknown";
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return "time unknown";
+                return date.toLocaleString();
+            }
+
+            function settingsSummary(value) {
+                if (!isRecord(value)) return "No readable settings object.";
+                const groups = Array.isArray(value.rules) ? value.rules : [];
+                const rules = groups.reduce((sum, group) => {
+                    return sum + (isRecord(group) && Array.isArray(group.rules) ? group.rules.length : 0);
+                }, 0);
+                const parts = [
+                    `${groups.length} group${groups.length === 1 ? "" : "s"}`,
+                    `${rules} rule${rules === 1 ? "" : "s"}`,
+                ];
+                if (typeof value.locale === "string") parts.push(`locale ${value.locale}`);
+                if (typeof value.theme === "string") parts.push(`theme ${value.theme}`);
+                if (typeof value.logLevel === "string") parts.push(`log ${value.logLevel}`);
+                if (typeof value.autosaveDelayMs === "number") parts.push(`autosave ${value.autosaveDelayMs} ms`);
+                return parts.join(" · ");
+            }
+
+            function statsSummary(value) {
+                if (!isRecord(value)) return "No readable stats object.";
+                const total = typeof value.total === "number" && Number.isFinite(value.total) ? value.total : 0;
+                const counts = isRecord(value.counts) ? Object.keys(value.counts).length : 0;
+                const parts = [
+                    `${total} redirect${total === 1 ? "" : "s"}`,
+                    `${counts} tracked rule${counts === 1 ? "" : "s"}`,
+                ];
+                const last = isRecord(value.last) ? value.last : null;
+                if (last && typeof last.from === "string" && typeof last.to === "string") {
+                    parts.push(`last ${last.from} → ${last.to}`);
+                }
+                return parts.join(" · ");
+            }
+
+            function renderSettings() {
+                const jsonEl = document.getElementById("settings-json");
+                const sizeEl = document.getElementById("settings-size");
+                const summaryEl = document.getElementById("settings-summary");
+                const copyEl = document.getElementById("settings-copy");
+                if (jsonEl === null || sizeEl === null || summaryEl === null || copyEl === null) return;
+
+                const entry = readDevValue("settings");
+                if (entry.unavailable) {
+                    jsonEl.textContent = "localStorage unavailable.";
+                    jsonEl.classList.add("is-empty");
+                    jsonEl.classList.remove("is-invalid");
+                    sizeEl.textContent = "";
+                    summaryEl.textContent = "Storage unavailable.";
+                    copyEl.disabled = true;
+                    return;
+                }
+                if (!entry.present) {
+                    jsonEl.textContent = "No dev settings yet.\nOpen the dashboard once or import a settings JSON.";
+                    jsonEl.classList.add("is-empty");
+                    jsonEl.classList.remove("is-invalid");
+                    sizeEl.textContent = "absent";
+                    summaryEl.textContent = "No dev settings loaded.";
+                    copyEl.disabled = true;
+                    return;
+                }
+
+                jsonEl.classList.remove("is-empty");
+                jsonEl.classList.toggle("is-invalid", entry.invalid);
+                jsonEl.textContent = entry.invalid ? entry.raw : prettyJson(entry.value);
+                sizeEl.textContent = formatBytes(new TextEncoder().encode(entry.raw).length);
+                summaryEl.textContent = entry.invalid
+                    ? "Invalid JSON — raw value shown."
+                    : settingsSummary(entry.value);
+                copyEl.disabled = false;
+            }
+
+            function renderStats() {
+                const jsonEl = document.getElementById("stats-json");
+                const sizeEl = document.getElementById("stats-size");
+                const summaryEl = document.getElementById("stats-summary");
+                if (jsonEl === null || sizeEl === null || summaryEl === null) return;
+
+                const entry = readDevValue("stats");
+                if (entry.unavailable) {
+                    jsonEl.textContent = "localStorage unavailable.";
+                    jsonEl.classList.add("is-empty");
+                    jsonEl.classList.remove("is-invalid");
+                    sizeEl.textContent = "";
+                    summaryEl.textContent = "Storage unavailable.";
+                    return;
+                }
+                if (!entry.present) {
+                    jsonEl.textContent =
+                        "No dev stats yet.\nStats appear after a redirect in a localStorage-backed session.";
+                    jsonEl.classList.add("is-empty");
+                    jsonEl.classList.remove("is-invalid");
+                    sizeEl.textContent = "absent";
+                    summaryEl.textContent = "No dev stats loaded.";
+                    return;
+                }
+
+                jsonEl.classList.remove("is-empty");
+                jsonEl.classList.toggle("is-invalid", entry.invalid);
+                jsonEl.textContent = entry.invalid ? entry.raw : prettyJson(entry.value);
+                sizeEl.textContent = formatBytes(new TextEncoder().encode(entry.raw).length);
+                summaryEl.textContent = entry.invalid ? "Invalid JSON — raw value shown." : statsSummary(entry.value);
+            }
+
+            function deleteKey(key) {
+                if (!window.confirm(`Delete ${GM_PREFIX}${key} from dev storage?`)) return;
+                try {
+                    localStorage.removeItem(GM_PREFIX + key);
+                    setStatus(`${GM_PREFIX}${key} deleted.`);
+                } catch (error) {
+                    setStatus(`Delete failed: ${String(error)}`);
+                }
+                refreshStorage();
+            }
+
+            function renderKeys() {
+                const listEl = document.getElementById("storage-keys");
+                const unknownEl = document.getElementById("storage-unknown");
+                if (listEl === null || unknownEl === null) return;
+
+                listEl.textContent = "";
+                for (const key of KNOWN_KEYS) {
+                    const entry = readDevValue(key);
+                    const row = document.createElement("div");
+                    row.className = "key-row";
+
+                    const name = document.createElement("span");
+                    name.className = "key-name";
+                    const glyph = document.createElement("span");
+                    glyph.className = "rr-icon";
+                    glyph.dataset.icon = KEY_ICONS[key] ?? "database";
+                    glyph.setAttribute("aria-hidden", "true");
+                    const code = document.createElement("code");
+                    code.textContent = `${GM_PREFIX}${key}`;
+                    name.append(glyph, code);
+
+                    const size = document.createElement("span");
+                    size.className = "key-size";
+                    size.textContent = entry.present
+                        ? formatBytes(new TextEncoder().encode(entry.raw).length)
+                        : "absent";
+
+                    const actions = document.createElement("span");
+                    actions.className = "key-actions";
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "btn btn--sm btn--danger";
+                    const buttonGlyph = document.createElement("span");
+                    buttonGlyph.className = "rr-icon";
+                    buttonGlyph.dataset.icon = "delete";
+                    buttonGlyph.setAttribute("aria-hidden", "true");
+                    button.append(buttonGlyph, document.createTextNode("Delete"));
+                    button.disabled = !entry.present;
+                    button.addEventListener("click", () => deleteKey(key));
+                    actions.append(button);
+
+                    row.append(name, size, actions);
+                    listEl.append(row);
+                }
+
+                const known = new Set(KNOWN_KEYS.map((key) => `${GM_PREFIX}${key}`));
+                let unknown = 0;
+                try {
+                    for (let i = 0; i < localStorage.length; i += 1) {
+                        const key = localStorage.key(i);
+                        if (key !== null && key.startsWith(GM_PREFIX) && !known.has(key)) unknown += 1;
+                    }
+                } catch {
+                    unknown = 0;
+                }
+                unknownEl.textContent =
+                    unknown === 0 ? "" : `${unknown} additional rrGM_* key${unknown === 1 ? "" : "s"} not shown.`;
+            }
+
+            function refreshStorage() {
+                renderSettings();
+                renderStats();
+                renderKeys();
+            }
+
+            // * Clipboard API first; execCommand fallback for non-secure contexts.
+            async function copyText(text) {
+                if (text === "") return false;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch {
+                    try {
+                        const textarea = document.createElement("textarea");
+                        textarea.value = text;
+                        textarea.setAttribute("readonly", "");
+                        textarea.style.position = "fixed";
+                        textarea.style.top = "-1000px";
+                        textarea.style.opacity = "0";
+                        document.body.append(textarea);
+                        textarea.select();
+                        const copied = document.execCommand("copy");
+                        textarea.remove();
+                        return copied;
+                    } catch {
+                        return false;
+                    }
+                }
+            }
+
+            async function refreshArtifact(id, config) {
+                const dot = document.getElementById(`artifact-${id}-dot`);
+                const meta = document.getElementById(`artifact-${id}-meta`);
+                const install = document.getElementById(`artifact-${id}-install`);
+                const hint = document.getElementById(`artifact-${id}-hint`);
+                if (dot === null || meta === null || install === null || hint === null) return false;
+
+                dot.className = "dot";
+                meta.textContent = "checking…";
+                install.hidden = true;
+                install.removeAttribute("href");
+                hint.hidden = true;
+
+                try {
+                    const response = await fetch(`/dist/${config.file}`, { method: "HEAD", cache: "no-store" });
+                    const contentType = response.headers.get("content-type") ?? "";
+                    if (!response.ok || !contentType.includes("javascript")) {
+                        throw new Error(`not built (HTTP ${response.status})`);
+                    }
+                    const lengthHeader = response.headers.get("content-length");
+                    const bytes = lengthHeader === null ? Number.NaN : Number(lengthHeader);
+                    const modified = response.headers.get("last-modified");
+                    dot.className = "dot dot--ok";
+                    meta.textContent = `${formatBytes(bytes)} · modified ${formatWhen(modified)}`;
+                    install.href = `/dist/${config.file}`;
+                    install.hidden = false;
+                    return true;
+                } catch {
+                    dot.className = "dot dot--missing";
+                    meta.textContent = "not built";
+                    install.hidden = true;
+                    install.removeAttribute("href");
+                    hint.hidden = false;
+                    return false;
+                }
+            }
+
+            async function refreshArtifacts() {
+                setStatus("Checking artifacts…");
+                const results = await Promise.all([
+                    refreshArtifact("dev", ARTIFACTS.dev),
+                    refreshArtifact("prod", ARTIFACTS.prod),
+                ]);
+                const present = results.filter(Boolean).length;
+                setStatus(`${present} of 2 artifacts present.`);
+            }
+
+            const metaOrigin = document.getElementById("meta-origin-text");
+            if (metaOrigin !== null) metaOrigin.textContent = window.location.host;
+
+            // * Existing dev flow: open the Svelte dashboard in a new tab.
+            document.getElementById("open-dashboard")?.addEventListener("click", () => {
+                const dashboardUrl = `${window.location.origin}/dashboard.html#rr-dashboard`;
+                window.open(dashboardUrl, "_blank", "noopener,noreferrer");
+            });
+
+            document.getElementById("refresh-storage")?.addEventListener("click", () => {
+                refreshStorage();
+                setStatus("Dev storage refreshed.");
+            });
+
+            document.getElementById("refresh-artifacts")?.addEventListener("click", () => {
+                void refreshArtifacts();
+            });
+
+            document.getElementById("settings-copy")?.addEventListener("click", async () => {
+                const entry = readDevValue("settings");
+                const text = entry.invalid ? entry.raw : prettyJson(entry.value);
+                const copied = await copyText(text);
+                setStatus(copied ? "settings JSON copied." : "Copy failed — clipboard unavailable.");
+            });
+
+            // * Import an exported settings JSON (prod backup) into dev storage.
+            const prodSettingsButton = document.getElementById("load-prod-settings");
+            const prodSettingsFile = document.getElementById("prod-settings-file");
+            prodSettingsButton?.addEventListener("click", () => {
+                prodSettingsFile?.click();
+            });
+            prodSettingsFile?.addEventListener("change", (event) => {
+                const input = event.currentTarget;
+                const file = input?.files?.[0];
+                if (input !== null) input.value = "";
+                if (file === undefined) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const parsed = JSON.parse(String(reader.result));
+                        const candidate = isRecord(parsed) && "settings" in parsed ? parsed.settings : parsed;
+                        if (!isRecord(candidate)) throw new Error("settings must be a JSON object");
+                        localStorage.setItem(`${GM_PREFIX}settings`, JSON.stringify(candidate));
+                        refreshStorage();
+                        const groups = Array.isArray(candidate.rules) ? candidate.rules.length : 0;
+                        setStatus(
+                            `Prod settings loaded (${groups} group${groups === 1 ? "" : "s"}) — reload the dashboard.`,
+                        );
+                    } catch (error) {
+                        setStatus(`Load failed: ${String(error)}`);
+                    }
+                };
+                reader.onerror = () => setStatus("Load failed — could not read file.");
+                reader.readAsText(file);
+            });
+
+            // * Reset removes settings, stats and the dashboard request together.
+            document.getElementById("reset-dev-settings")?.addEventListener("click", () => {
+                if (
+                    !window.confirm(
+                        "Remove all rrGM_* dev storage entries (settings, stats, dashboard-request) and reset to defaults?",
+                    )
+                ) {
+                    return;
+                }
+                try {
+                    const keys = [];
+                    for (let i = 0; i < localStorage.length; i += 1) {
+                        const key = localStorage.key(i);
+                        if (key !== null && key.startsWith(GM_PREFIX)) keys.push(key);
+                    }
+                    for (const key of keys) localStorage.removeItem(key);
+                    refreshStorage();
+                    setStatus("Dev storage reset — reopen or reload the dashboard.");
+                } catch (error) {
+                    setStatus(`Reset failed: ${String(error)}`);
+                }
+            });
+
+            // * Dashboard tabs share this origin, so their writes surface as storage events.
+            window.addEventListener("storage", (event) => {
+                if (event.key === null || event.key.startsWith(GM_PREFIX)) refreshStorage();
+            });
+            window.addEventListener("focus", refreshStorage);
+
+            refreshStorage();
+            void refreshArtifacts();
+        </script>
+
+        <script type="module">
+            import { icons } from "/src/lib/gui/icon.ts";
+
+            // * Same inline Material registry as the dashboard; decorative chrome only.
+            function decorateIcons(root) {
+                for (const el of root.querySelectorAll("[data-icon]:not([data-icon-ready])")) {
+                    const glyph = icons[el.dataset.icon];
+                    if (glyph === undefined) continue;
+                    el.innerHTML = glyph;
+                    el.dataset.iconReady = "true";
+                    el.setAttribute("aria-hidden", "true");
+                }
+            }
+
+            decorateIcons(document);
+            // * Storage rows are rebuilt by the classic script; keep them decorated.
+            new MutationObserver(() => decorateIcons(document)).observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        </script>
+    </body>
+</html>

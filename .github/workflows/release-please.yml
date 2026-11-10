@@ -1,0 +1,95 @@
+# ☰☰☰ Release Please — changelog + version automation ☰☰☰
+# Watches conventional commits on main and maintains a release PR
+# ("chore(main): release X.Y.Z") containing CHANGELOG.md + version bumps.
+# The bootstrap PR is the exception: it only bumps the manifest, because
+# `skip-changelog` preserves the hand-written 1.0.0 init entry (ADR 0008).
+# Merging that PR creates the git tag vX.Y.Z and the GitHub Release, and the
+# release-assets job below builds + attaches the .user.js release asset.
+# The same asset job can be re-run manually for an existing tag.
+#
+# ! The asset build MUST live in THIS workflow: release-please publishes the
+#   Release via GITHUB_TOKEN, and events triggered by GITHUB_TOKEN deliberately
+#   do not start other workflow runs (GitHub recursion guard). A separate
+#   `on: release` workflow would therefore never fire for automated releases.
+
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to re-attach the asset to (e.g. v1.2.3)"
+        required: false
+        type: string
+
+# ─── Concurrency — serialize main pushes; never cancel a release run ───
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# ─── Permissions — release-please needs to open/merge PRs, push tags + upload assets ───
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    # * Manual runs only rebuild assets; they must not open/update release PRs.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          # ! A PAT is required so CI checks run on release PRs: events created
+          #   by GITHUB_TOKEN do not trigger other workflow runs.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          # LABEL: config lists the bump targets. package.json + package-lock.json
+          #   are bumped; vite-plugin-monkey derives the userscript @version.
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # LABEL: runs when a release was just published, or when a tag is supplied
+  #   manually; silent otherwise.
+  release-assets:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || inputs.tag) }}
+    runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+    steps:
+      # LABEL: checkout the target tag + Node 22
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG_NAME }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      # LABEL: build the prod artifact
+      - run: npm ci
+      - run: npm run build
+      # LABEL: the userscript @version is derived from package.json; it MUST
+      #   equal the tag being released (minus the leading "v").
+      - name: Assert artifact version matches tag
+        run: |
+          expected="${TAG_NAME#v}"
+          actual="$(grep -m1 -E '^// @version[[:space:]]+' dist/redirect-rules.user.js | sed -E 's|^// @version[[:space:]]+||; s|[[:space:]]+$||' || true)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::dist/redirect-rules.user.js @version '$actual' does not match tag '$TAG_NAME' (expected '$expected')"
+            exit 1
+          fi
+          echo "artifact @version $actual matches tag $TAG_NAME"
+      # LABEL: attach dist/redirect-rules.user.js to the release — the file
+      #   that the userscript's updateURL/downloadURL points at
+      #   (releases/latest/download/...). --clobber makes a re-run idempotent.
+      - name: Attach userscript to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$TAG_NAME" dist/redirect-rules.user.js --clobber

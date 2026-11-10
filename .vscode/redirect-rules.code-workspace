@@ -1,0 +1,19 @@
+{
+    "folders": [
+        {
+            "path": "..",
+        },
+    ],
+
+    "settings": {
+        "[css]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
+        },
+        "[svelte]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
+        },
+        "[yaml]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
+        },
+    },
+}

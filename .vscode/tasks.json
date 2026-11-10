@@ -1,0 +1,271 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "build",
+            "detail": "Minified prod build (__DEV__=false, dev-only menu entries dead-code-eliminated) -> dist/redirect-rules.user.js",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Build Prod"
+        },
+        {
+            "type": "npm",
+            "script": "build:dev",
+            "detail": "RR_DEV=1 -> readable build + dev-only TM-menu entries included (__DEV__=true) -> dist/redirect-rules.dev.user.js",
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Build Dev"
+        },
+        {
+            "type": "npm",
+            "script": "dev:certs",
+            "detail": "ONE-TIME (idempotent) CA trust setup for vite-plugin-mkcert; run manually once per machine, not on every dev start.",
+            "icon": {
+                "color": "terminal.ansiBlue",
+                "id": "globe"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "label": "Trust Dev CA"
+        },
+        {
+            "type": "shell",
+            "command": "powershell -ExecutionPolicy Bypass -File scripts/port-guard.ps1",
+            "detail": "Pre-checks port 5173: free -> pass; busy -> prompt ignore / kill / cancel.",
+            "icon": {
+                "color": "terminal.ansiYellow",
+                "id": "shield"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "label": "Guard Port 5173"
+        },
+        {
+            "type": "shell",
+            "command": "powershell -ExecutionPolicy Bypass -File scripts/dev-server.ps1",
+            "detail": "Vite dev server: UTF-8, opens https://127.0.0.1:5173/ after 2s, streams output. Assumes port is free.",
+            "icon": {
+                "color": "terminal.ansiBlue",
+                "id": "globe"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            },
+            "label": "Serve Dev"
+        },
+        {
+            "type": "npm",
+            "script": "open:install:dev",
+            "detail": "Serves dist/redirect-rules.dev.user.js on a loopback port and opens the Tampermonkey install page (closes after the fetch).",
+            "dependsOn": ["Build Dev"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Install Dev"
+        },
+        {
+            "type": "npm",
+            "script": "open:install:prod",
+            "detail": "Serves dist/redirect-rules.user.js on a loopback port and opens the Tampermonkey install page (closes after the fetch).",
+            "dependsOn": ["Build Prod"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Install Prod"
+        },
+        {
+            "type": "npm",
+            "script": "dev:gui",
+            "detail": "Isolated GUI/component flow on the same HTTPS dev identity (port 5173).",
+            "dependsOn": ["Guard Port 5173"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            },
+            "label": "Dev GUI"
+        },
+        {
+            "type": "shell",
+            "command": "npm run test -- --reporter=dot",
+            "detail": "All unit tests with compact dot output (failures, warnings, skips highlighted).",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Test Unit"
+        },
+        {
+            "type": "npm",
+            "script": "test:watch",
+            "detail": "Vitest in watch mode for the current working set.",
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            },
+            "label": "Test Watch"
+        },
+        {
+            "type": "npm",
+            "script": "test:e2e",
+            "detail": "Playwright Firefox against locally hosted synthetic fixtures (localhost:4184, never the live web), single worker, ~5s.",
+            "dependsOn": ["Build Prod"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Test E2E"
+        },
+        {
+            "type": "npm",
+            "script": "test:e2e:ui",
+            "detail": "Playwright interactive UI mode against the built artifact.",
+            "dependsOn": ["Build Prod"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            },
+            "label": "Test E2E UI"
+        },
+        {
+            "type": "npm",
+            "script": "format",
+            "detail": "prettier --write . - auto-fix formatting (4-space indent, double quotes, 120 cols).",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Format Fix"
+        },
+        {
+            "type": "npm",
+            "script": "format:check",
+            "detail": "prettier --check . - CI formatting gate, no writes.",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Format Check"
+        },
+        {
+            "type": "npm",
+            "script": "check",
+            "detail": "svelte-check + tsc (tsconfig.node.json) - typecheck gate incl. tests.",
+            "problemMatcher": ["$tsc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Check Types"
+        },
+        {
+            "type": "npm",
+            "script": "docs:check",
+            "detail": "Architecture-docs gate: sections, reference paths, Verified footers.",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Check Docs"
+        },
+        {
+            "type": "npm",
+            "script": "release:check",
+            "detail": "Release-config gate: release-please wiring, version mirrors, and changelog/bootstrap coherence.",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Check Release"
+        },
+        {
+            "type": "shell",
+            "command": "npm run comments:check -- --strict",
+            "detail": "Comment gate: English only, no internal iteration shorthand, line/block length (fails on findings).",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Check Comments"
+        },
+        {
+            "type": "shell",
+            "command": "npm run css:check -- --strict",
+            "detail": "CSS gate: declared-but-unreferenced classes, keyframes, and --rr-* properties (fails on findings).",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Check CSS"
+        },
+        {
+            "label": "Dev Server",
+            "detail": "Composite: port guard -> dev build -> serve (fail-fast). Run 'Trust Dev CA' once per machine beforehand.",
+            "dependsOn": ["Guard Port 5173", "Build Dev", "Serve Dev"],
+            "dependsOrder": "sequence"
+        },
+        {
+            "label": "Quality Gate",
+            "detail": "Composite, mirrors CI.yml gate order: types -> unit -> comments -> css -> docs -> release -> format -> prod build (fail-fast).",
+            "dependsOn": [
+                "Check Types",
+                "Test Unit",
+                "Check Comments",
+                "Check CSS",
+                "Check Docs",
+                "Check Release",
+                "Format Check",
+                "Build Prod"
+            ],
+            "dependsOrder": "sequence",
+            "group": "test"
+        }
+    ]
+}
