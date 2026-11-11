@@ -135,8 +135,8 @@ test("double-click edits the site description and persists it", async ({ page })
     await expect(input).toBeVisible();
     await expect(input).toBeFocused();
 
-    // * Zero-jump contract: editing must not fold the group (caption clicks are
-    //   not fold toggles) and must not change the row height.
+    // * Zero-jump contract: editing must not fold the group (the caption click
+    //   pair restores the pre-edit fold state) and must not change the row height.
     expect(await site.evaluate((el) => (el as HTMLDetailsElement).open)).toBe(false);
     const [summaryAfterBox, textBox, fieldBox, actionsBox] = await Promise.all([
         summary.boundingBox(),
@@ -153,15 +153,15 @@ test("double-click edits the site description and persists it", async ({ page })
     }
 
     // * Outward-expansion contract: the field box is the caption box
-    //   grown by 4px vertically / 6px horizontally with compensating padding, so
+    //   grown by 6px vertically / 8px horizontally with compensating padding, so
     //   the glyph origin and the row height stay put.
-    expect(Math.abs((fieldBox?.x ?? 0) - (textBox?.x ?? 0) + 6)).toBeLessThanOrEqual(1);
-    expect(Math.abs((fieldBox?.y ?? 0) - (textBox?.y ?? 0) + 4)).toBeLessThanOrEqual(1);
-    expect(Math.abs((fieldBox?.width ?? 0) - (textBox?.width ?? 0) - 12)).toBeLessThanOrEqual(1);
-    expect(Math.abs((fieldBox?.height ?? 0) - (textBox?.height ?? 0) - 8)).toBeLessThanOrEqual(1);
+    expect(Math.abs((fieldBox?.x ?? 0) - (textBox?.x ?? 0) + 8)).toBeLessThanOrEqual(1);
+    expect(Math.abs((fieldBox?.y ?? 0) - (textBox?.y ?? 0) + 6)).toBeLessThanOrEqual(1);
+    expect(Math.abs((fieldBox?.width ?? 0) - (textBox?.width ?? 0) - 16)).toBeLessThanOrEqual(1);
+    expect(Math.abs((fieldBox?.height ?? 0) - (textBox?.height ?? 0) - 12)).toBeLessThanOrEqual(1);
 
-    // * Fixed clearance to the action strip: the field overhangs 6px to the
-    //   right, so the strip carries +6px margin → 8px field-to-strip.
+    // * Fixed clearance to the action strip: the field overhangs 8px to the
+    //   right, so the strip carries +8px margin → 8px field-to-strip.
     const gapToActions = (actionsBox?.x ?? 0) - ((fieldBox?.x ?? 0) + (fieldBox?.width ?? 0));
     expect(gapToActions).toBeGreaterThanOrEqual(7);
     expect(gapToActions).toBeLessThanOrEqual(9);

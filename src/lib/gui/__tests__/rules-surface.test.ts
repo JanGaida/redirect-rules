@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
    preview test cases (ADR 0016). */
 const css = readFileSync(new URL("../dashboard.css", import.meta.url), "utf8");
 const rulesTab = readFileSync(new URL("../tabs/RulesTab.svelte", import.meta.url), "utf8");
+const inlineCaption = readFileSync(new URL("../components/InlineCaption.svelte", import.meta.url), "utf8");
 
 function ruleBodies(selector: string): string[] {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -45,6 +46,33 @@ describe("rules surface", () => {
         expect(css).toMatch(/\.rr-master > details\.rr-master-site > \.rr-site-shell\s*\{/);
         expect(css).not.toMatch(/(^|\n)details\.rr-master-site > \.rr-site-shell\s*\{/);
         expect(css).not.toMatch(/(^|\n)details\.rr-master-site\[open\] > \.rr-site-shell\s*\{/);
+    });
+});
+
+describe("caption edit overlay", () => {
+    it("grows the overlay outward with mirrored offsets (zero jump)", () => {
+        const overlay = ruleBodies(".rr-master-site .rr-group-summary .rr-summary-caption .rr-summary-desc")[0] ?? "";
+        expect(overlay).toMatch(/position:\s*absolute/);
+        expect(overlay).toMatch(/height:\s*100%/);
+        expect(overlay).toMatch(/top:\s*-6px/);
+        expect(overlay).toMatch(/left:\s*-8px/);
+        expect(overlay).toMatch(/padding:\s*6px 8px/);
+    });
+
+    it("hints the double-click route with a dotted hover rule", () => {
+        expect(css).toMatch(/@media \(hover: hover\)\s*\{\s*\.rr-group-summary:hover > \.rr-summary-lead/);
+        expect(css).toMatch(/text-decoration:\s*underline dotted/);
+    });
+});
+
+describe("caption edit gesture", () => {
+    it("counts its own click pair instead of the host dblclick", () => {
+        expect(inlineCaption).toMatch(/from "\.\.\/caption-edit-gesture"/);
+        expect(inlineCaption).toMatch(/isCaptionEditClick\(/);
+        expect(inlineCaption).toMatch(/onclick=\{handleCaptionClick\}/);
+        expect(inlineCaption).toMatch(/onpointerdown=/);
+        // * One `ondblclick` is left: the overlay input's stopPropagation guard.
+        expect(inlineCaption.match(/ondblclick/g) ?? []).toHaveLength(1);
     });
 });
 

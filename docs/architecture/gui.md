@@ -241,8 +241,10 @@ flowchart TB
   leading affix; the rail itself reads as a static prefix (panel-2 surface,
   strong divider, muted bold glyph), never as a button or editable text. The
   inline `.rr-summary-desc` overlays keep `font: inherit`
-  and stay unchanged. The group description is edited through the `InlineCaption`
-  overlay (double-click, F2 on the focused summary, or the trailing pencil); the group
+  and grow 6px/8px outward with mirrored offsets; a dotted hover underline on the
+  caption advertises the edit route. The group description is edited through the
+  `InlineCaption` overlay (double-click, F2 on the focused summary, or the trailing
+  pencil); the group
   body itself opens with the site-gate `TextInput`. The shell uses `100dvh` after a `100%` fallback, and `.rr-pop`
   caps at `min(80dvh, 720px)` with internal scrolling.
 - Icons (27.10.; consolidated 02.11.; extended 03.11.): Material Symbols
@@ -293,12 +295,17 @@ flowchart TB
   that readable form, so a described group stays searchable by its regex.
   Double-clicking the caption (or pressing F2 on the focused summary) overlays
   it with a compact text field at IDENTICAL font metrics; the field box is
-  expanded 4px/6px OUTWARD with compensating padding, so the glyph origin and
+  expanded 6px/8px OUTWARD with compensating padding, so the glyph origin and
   the row height stay fixed (the ring sits in that expansion — no layout shift),
   and the placeholder overrides the UA alpha with solid `--rr-muted` at full
   opacity: Enter/blur commits a trimmed
   description, Escape discards it, and an empty value removes the field
-  (fallback again). A single click still toggles the group. A pencil at the
+  (fallback again). A single click still toggles the group; the double-click is
+  the component's OWN click pair (`CAPTION_EDIT_CLICK_MS`, 800 ms) gated to
+  mouse/pen `pointerdown`, not the native `dblclick` (whose OS interval is too
+  tight). The second click calls `preventDefault` and restores the fold state the
+  first click captured, so editing neither toggles the row twice nor leaves it
+  open; `e.detail >= 2` stays as the fallback for long OS intervals. A pencil at the
   caption's trailing edge (ADR 0031) is the touch route: one tap opens the same
   overlay, and the glyph stays hidden until row hover, focus, or open state; the
   title host collapses its 28/36px reserve at rest (URL-value pencils keep a fixed
@@ -729,8 +736,9 @@ flowchart LR
   red/green diff as the TOTAL block (`PreviewSpans`); the diff compares the two
   displayed values (trimmed input → trimmed expected output) and is independent
   of the test result — the status chip alone reports pass/fail. Empty values show
-  `—` without a diff. A double-click or the row pencil opens the same zero-jump
-  overlay; long URLs clamp to two lines with the full value as tooltip. The
+  `—` without a diff. A double-click (the same 800 ms click pair, mouse/pen) or
+  the row pencil opens the same zero-jump overlay; long URLs clamp to two lines
+  with the full value as tooltip. The
   expanded body carries only the chain and, for a missing/failing test, the
   TOTAL block — no URL or description fields; the summary is the only editing
   surface for both. The caption is description-only because the input URL has
@@ -1189,4 +1197,4 @@ URL/chain divider.
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, dashboard.css, transfer view, motion.ts, chat-template.ts
+Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, InlineCaption.svelte, caption-edit-gesture.ts, dashboard.css, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, transfer view, motion.ts, chat-template.ts

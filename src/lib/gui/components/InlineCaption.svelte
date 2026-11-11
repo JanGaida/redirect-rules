@@ -13,10 +13,14 @@
      *   commit never does (clicking another row keeps that click's focus).
      * * Clicks/keys never bubble: the caption lives inside `<summary>`, so an
      *   unguarded event would toggle the surrounding disclosure.
+     * * Edit gesture: an own click pair (`CAPTION_EDIT_CLICK_MS`) beats the tight
+     *   OS `dblclick` interval; the 2nd click is swallowed, so `<summary>`
+     *   toggles once. Mouse/pen only — touch keeps the pencil route.
      * * Optional `children` render rich content (URL spans); without it the
      *   plain `caption` text is shown.
      */
     import { tick, type Snippet } from "svelte";
+    import { isCaptionEditClick } from "../caption-edit-gesture";
     import Icon from "./Icon.svelte";
 
     interface Props {
@@ -57,8 +61,16 @@
     let draft = $state("");
     let inputEl = $state<HTMLInputElement | null>(null);
     let editButtonEl = $state<HTMLButtonElement | null>(null);
+    let hostEl = $state<HTMLElement | null>(null);
     // * Plain flags (not reactive): they only guard the event handlers.
     let wasEditing = false;
+    // * Click-pair state: timestamp of the last unpaired click + its pointer kind.
+    let pairAt: number | null = null;
+    let pointerKind: string | null = null;
+    // * Fold state read BEFORE the first click toggled it — a pair restores it,
+    //   so the edit gesture never opens/folds the surrounding row.
+    let pairDetails: HTMLDetailsElement | null = null;
+    let pairWasOpen = false;
     // * Finished overlay (commit/cancel) — the unmount blur must not re-commit.
     let finished = false;
     // * Opener element + restore flag (plain: the effect must not re-subscribe).
@@ -112,23 +124,48 @@
         restoreFocus = true;
         onEditingChange(false);
     }
+
+    // * Own click pair instead of `dblclick`: the OS interval is too tight.
+    // * Only a click preceded by a mouse/pen `pointerdown` counts — keyboard
+    //   clicks (`detail === 0`) and touch taps keep their own routes.
+    // ! The 2nd click must not toggle the surrounding `<summary>` again; the
+    //   fold state is restored, so editing never opens/folds the row.
+    function handleCaptionClick(e: MouseEvent): void {
+        const kind = pointerKind;
+        pointerKind = null;
+        if (editing || kind === null || kind === "touch") return;
+        const now = performance.now();
+        const isPair = e.detail >= 2 || isCaptionEditClick(pairAt, now);
+        if (!isPair) {
+            pairAt = now;
+            pairDetails = hostEl?.closest("details") ?? null;
+            pairWasOpen = pairDetails?.open ?? false;
+            return;
+        }
+        pairAt = null;
+        e.preventDefault();
+        e.stopPropagation();
+        if (pairDetails && pairDetails.open !== pairWasOpen) pairDetails.open = pairWasOpen;
+        pairDetails = null;
+        onEditingChange(true);
+    }
 </script>
 
 <span class="rr-summary-caption">
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
     <span
         class="rr-summary-host"
+        bind:this={hostEl}
         title={caption}
-        ondblclick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!editing) onEditingChange(true);
+        onpointerdown={(e) => {
+            pointerKind = e.pointerType;
         }}
+        onclick={handleCaptionClick}
     >
         {#if children}{@render children()}{:else}{caption}{/if}
     </span>
     {#if editLabel}
-        <!-- * Touch route: one tap opens the same overlay (dblclick/F2 stay). -->
+        <!-- * Touch route: one tap opens the same overlay (double-click/F2 stay). -->
         <button
             type="button"
             class="rr-caption-edit"

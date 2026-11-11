@@ -1,6 +1,6 @@
 # ADR 0031: Dashboard interaction model
 
-- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036; amended 2026-11-11 — responsive navigation, phone pane switch, second grip axis, collapsed row chrome)
+- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036; amended 2026-11-11 — responsive navigation, phone pane switch, second grip axis, collapsed row chrome; caption click-pair window)
 - Amended by: [ADR 0045](0045-mobile-layout-bottom-nav-and-pane-switch.md) (layout breakpoints, bottom bar, pane switch, horizontal grip)
 - Date: 2026-11-02
 - Applies to: the dashboard (`src/lib/gui/App.svelte`, `src/lib/gui/tabs/*.svelte`,
@@ -61,7 +61,11 @@ rule in the Consequences.
 6. **One description surface.** `InlineCaption.svelte` owns the summary caption, the
    absolute overlay input, the draft/focus/blur cycle and `<summary>`-safe event
    guards. Double-click or F2 opens it; Enter commits, Escape cancels, blur commits;
-   an unchanged trimmed value is not written. Only one row edits at a time
+   an unchanged trimmed value is not written. The double-click is the component's OWN
+   click pair (`CAPTION_EDIT_CLICK_MS`, 800 ms) gated to mouse/pen `pointerdown`, not
+   the native `dblclick` whose OS interval is too tight; the second click's
+   `preventDefault` plus the captured fold state keep the surrounding `<summary>`
+   unchanged, and `e.detail >= 2` stays as the fallback for long OS intervals. Only one row edits at a time
    (`editingSite` / `editingPreview`). It is the only description editor for site
    groups and preview test cases — the duplicate body fields are removed and
    descriptions are single-line. A trailing icon-only pencil is the touch route: one
