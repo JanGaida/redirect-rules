@@ -1186,7 +1186,4 @@ URL/chain divider.
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — against `App.svelte`, `RulesTab.svelte`, `dashboard.css`
-(mobile bottom bar, pane switch, both grips), `dashboard-meta.ts`, `RuleEditor.svelte`, 
-`preview.ts`, `GroupTestIndicator.svelte`, `dashboard.css`, transfer view, `motion.ts`, 
-`chat-template.ts`.
+Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, dashboard.css, transfer view, motion.ts, chat-template.ts
