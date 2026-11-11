@@ -2,8 +2,9 @@
  * GM_* polyfill for Playwright addInitScript injection.
  *
  * The userscript expects Tampermonkey-provided globals (`GM_getValue`,
- * `GM_setValue`, `GM_deleteValue`, `GM_listValues`, `GM_registerMenuCommand` — the
- * grants in vite.config.ts; plus `GM_info`, provided unconditionally). Playwright
+ * `GM_setValue`, `GM_deleteValue`, `GM_listValues`, `GM_registerMenuCommand`,
+ * `GM_download` — the grants in vite.config.ts; plus `GM_info`, provided
+ * unconditionally). Playwright
  * has no Tampermonkey — this polyfill provides an in-memory + localStorage-backed
  * equivalent so the script boots.
  *
@@ -169,6 +170,21 @@ export function buildGmPolyfillInitScript(seed: Record<string, unknown> = {}): s
             navigator.clipboard.writeText(text).catch(function() {});
           }
         } catch (e) {}
+      };
+
+      // * Settings export: GM_download is page-CSP-exempt in Tampermonkey. The
+      //   polyfill decodes the data URL and stashes it so specs can assert the
+      //   exported JSON instead of observing a real browser download.
+      window.__rrDownloads = [];
+      window.GM_download = function(details) {
+        var entry = typeof details === "string"
+          ? { url: details, name: "" }
+          : { url: details.url, name: details.name };
+        try {
+          var comma = entry.url.indexOf(",");
+          entry.text = decodeURIComponent(entry.url.slice(comma + 1));
+        } catch (e) {}
+        window.__rrDownloads.push(entry);
       };
 
       // ! Native dialogs (unsaved-changes confirm) would hang Playwright — no-op.

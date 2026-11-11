@@ -58,6 +58,15 @@ declare const GM_addValueChangeListener: (
 // * Chat-Template copy: synchronous fire-and-forget clipboard
 // write — the takeover tab has GM access (its own context, ADR 0011).
 declare const GM_setClipboard: (text: string) => void;
+// * Settings export: GM_download is page-CSP-exempt — the dashboard host stub
+//   sends `sandbox`, which silently blocks Blob anchor downloads.
+declare const GM_download: (details: {
+    url: string;
+    name: string;
+    saveAs?: boolean;
+    onload?: () => void;
+    onerror?: (error: unknown) => void;
+}) => void;
 
 // * GM_info is ALWAYS available (no @grant entry needed) — Tampermonkey fills
 //   it from the userscript metadata header. Used by the About tab.

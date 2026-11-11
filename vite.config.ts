@@ -199,6 +199,8 @@ export default defineConfig(({ command, mode }) => {
                                   "GM_openInTab",
                                   "GM_addValueChangeListener",
                                   "GM_setClipboard",
+                                  // * Export bypasses the host stub's `sandbox` CSP.
+                                  "GM_download",
                               ],
                               "run-at": "document-start",
                               homepage: "https://github.com/JanGaida/redirect-rules",
