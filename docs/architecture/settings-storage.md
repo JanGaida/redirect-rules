@@ -24,7 +24,7 @@ flowchart TB
         Valid["validation.ts<br/>(invalidRegexCount, pruneEmptyRows)"]
         System["tabs/SystemTab.svelte<br/>(schema controls + transfer trigger)"]
         TransferView["settings-transfer-view.ts<br/>(rows / tri-state / filter)"]
-        Download["download.ts<br/>(Blob JSON download)"]
+        Download["download.ts<br/>(GM_download + Blob fallback)"]
         Dialog["components/SettingsTransferDialog.svelte<br/>(export | merge | replace)"]
     end
     subgraph Browser["browser / Tampermonkey"]
@@ -44,7 +44,7 @@ flowchart TB
     System -->|"field writes"| StoreMod
     Dialog -->|"row / tri-state / filter mapping"| TransferView
     Dialog -->|"parse / diff / merge / replace / export"| Transfer
-    Dialog -->|"Blob JSON download"| Download
+    Dialog -->|"GM_download (Blob fallback)"| Download
     System -->|"store.replace(next) + flush"| StoreMod
 ```
 

@@ -1680,6 +1680,27 @@ test("the export dialog opens with every section collapsed", async ({ page }) =>
     await expect(dialog).toHaveCount(0);
 });
 
+test("the export dialog downloads the backup through GM_download", async ({ page }) => {
+    const dashboard = await openSettingsTab(page);
+    await dashboard.locator(".rr-tab-panel--active").getByRole("button", { name: "Export backup" }).click();
+
+    const dialog = dashboard.locator("dialog.rr-transfer-dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+
+    const download = await dashboard.evaluate(() => {
+        const list = (window as unknown as { __rrDownloads: Array<{ name: string; text: string }> }).__rrDownloads;
+        const first = list[0];
+        return first === undefined
+            ? null
+            : { name: first.name, json: JSON.parse(first.text) as Record<string, unknown> };
+    });
+    expect(download).not.toBeNull();
+    expect(download!.name).toMatch(/^redirect-rules-(backup|export)-\d{8}-\d{4}\.json$/);
+    expect(download!.json).toMatchObject({ format: "redirect-rules-export", version: 1 });
+});
+
 test("a tall export dialog scrolls only its body, never the head or footer", async ({ page }) => {
     const dashboard = await openSettingsTab(page);
     await dashboard.setViewportSize({ width: 900, height: 480 });

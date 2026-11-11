@@ -25,7 +25,7 @@ flowchart TB
         System["tabs/SystemTab.svelte"]
         StatsTab["tabs/StatsTab.svelte<br/>(insight layout + performance banner)"]
         TransferView["settings-transfer-view.ts<br/>(rows / tri-state / filter)"]
-        Download["download.ts<br/>(Blob JSON download)"]
+        Download["download.ts<br/>(GM_download + Blob fallback)"]
         Info["tabs/InfoTab.svelte"]
         I18n["i18n.svelte.ts<br/>(t, TRANSLATIONS)"]
         Valid["validation.ts<br/>(invalidRegexCount, pruneEmptyRows)"]
@@ -124,7 +124,7 @@ flowchart TB
     System -->|"open / apply / close"| Transfer
     Transfer -->|"row / selection mapping"| TransferView
     Transfer -->|"parse / diff / merge / replace / export"| CoreTransfer
-    Transfer -->|"Blob JSON download"| Download
+    Transfer -->|"GM_download (Blob fallback)"| Download
     System -->|"modal flag"| UiState
     System -->|"snapshot + ruleHash"| Stats
     System -->|"live logLevel"| Log
@@ -829,6 +829,11 @@ siteManual:<index> | null`), so only one is open at a time and ESC closes it
 - The dialog reuses the Settings-tab field labels and the rules-tab kind/caption
   vocabulary; all new strings live under `transfer.*` in both locales. Summary counts use
   `tPlural`, so singular and plural labels stay correct.
+- Export writes the v1 envelope through `downloadJson`: `GM_download` (data URL)
+  is the primary path because the host stub sends `Content-Security-Policy:
+default-src 'none'; style-src 'unsafe-inline'; sandbox` — a sandboxed document
+  silently drops `<a download>` Blob downloads. The Blob anchor remains the
+  fallback for dev/browser runs without the GM API.
 - Replace mode ignores the row selection (its checkboxes are hidden): an empty selection
   does not disable Apply, while a partial/invalid file still blocks it (`isApplyDisabled`).
 - Every checkbox is wrapped in a `.rr-transfer-check-hit` label that carries the
