@@ -11,9 +11,9 @@
 > Regex-based URL rewriting for every page — before it renders.
 
 <p align="center">
-  <img src="assets/screenshots/dashboard-rules.png" width="672" height="420" alt="Redirect Rules dashboard: site groups in the explorer, the selected rule in the editor dock, and the preview pane with a test case and its rule chain.">
+  <img src="assets/screenshots/dashboard-rules.png" width="538" height="336" alt="Redirect Rules dashboard: site groups in the explorer, the selected rule in the editor dock, and the preview pane with a test case and its rule chain.">
   &nbsp;&nbsp;
-  <img src="assets/screenshots/dashboard-mobile.png" width="210" height="420" alt="The same dashboard on a phone: bottom-bar tabs, header utilities, and the Rules/Preview pane switch.">
+  <img src="assets/screenshots/dashboard-mobile.png" width="168" height="336" alt="The same dashboard on a phone: bottom-bar tabs, header utilities, and the Rules/Preview pane switch.">
 </p>
 
 A Tampermonkey userscript that rewrites URLs through regex rules at `document-start`, follows SPA navigation, and leaves fragments and raw query encodings alone.
