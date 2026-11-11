@@ -24,10 +24,14 @@ permissions:
   contents: read
   pull-requests: read
 
+# ! Job-level `timeout-minutes`: a hung step otherwise pins its job — and with it
+#   this concurrency slot — for the 360 min default.
+
 jobs:
   gate:
     name: check / test / comments / css / docs / release / format / build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # LABEL: checkout + Node 22 with npm cache
       - uses: actions/checkout@v7
@@ -49,6 +53,7 @@ jobs:
   e2e:
     name: e2e (Firefox, effective URL behavior)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # LABEL: checkout + Node 22 with npm cache
       - uses: actions/checkout@v7
@@ -65,6 +70,7 @@ jobs:
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # LABEL: full history is required to scan every commit reachable from the push/PR
       - uses: actions/checkout@v7
