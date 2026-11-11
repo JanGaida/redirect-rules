@@ -169,9 +169,12 @@ export function parseChangelog(markdown: string): ChangelogModel {
 
             if (level === 2) {
                 finishGroup();
-                const match = title.match(/^(.+?)(?:\s+\((\d{4}-\d{2}-\d{2})\))?\s*$/);
+                // * release-please links the version to a compare URL — keep the text only.
+                const linked = title.match(/^\[([^\]]+)\]\(([^)]+)\)(.*)$/);
+                const bare = linked ? `${linked[1]}${linked[3]}` : title;
+                const match = bare.match(/^(.+?)(?:\s+\((\d{4}-\d{2}-\d{2})\))?\s*$/);
                 release = {
-                    version: (match?.[1] ?? title).trim(),
+                    version: (match?.[1] ?? bare).trim(),
                     date: match?.[2] ?? null,
                     paragraphs: [],
                     looseItems: [],

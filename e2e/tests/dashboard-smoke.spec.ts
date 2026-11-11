@@ -467,7 +467,7 @@ test("the tabs switch and the autosave round-trip persists the settings", async 
     const release = dashboard.locator(".rr-changelog-release").first();
     await expect(release).toBeVisible();
     await expect(release).not.toHaveAttribute("open", "");
-    await expect(release.locator(".rr-changelog-version")).toContainText("1.0.0");
+    await expect(release.locator(".rr-changelog-version")).toHaveText(/^v\d+\.\d+\.\d+$/);
     await release.locator(".rr-changelog-release-head").click();
     await expect(release).toHaveAttribute("open", "");
     await expect(release.locator(".rr-changelog-group-title").first()).toContainText("Features");
