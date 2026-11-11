@@ -2071,10 +2071,22 @@ details.rr-master-site[open] > .rr-group-summary .rr-tri {
 
 /* * Caption pencil (ADR 0033): icon-only touch route to the description
       overlay. Absolute at the caption's trailing edge so the caption box and
-      the zero-jump overlay geometry stay unchanged; the host reserves the
-      space via padding-right. Hidden at rest; full on hover/focus/open/touch. */
+      the zero-jump overlay geometry stay unchanged. The TITLE host collapses
+      its 28/36px reserve at rest; URL-value hosts keep it (their text wraps). */
 .rr-summary-caption .rr-summary-host {
-    padding-right: 28px;
+    padding-right: calc(var(--rr-tap-min) + 4px);
+}
+
+/* * Title captions reclaim the pencil reserve while the pencil is hidden. */
+.rr-summary-lead > .rr-summary-caption > .rr-summary-host {
+    padding-right: 0;
+    transition: padding-right var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+}
+
+.rr-group-summary:hover > .rr-summary-lead > .rr-summary-caption > .rr-summary-host,
+.rr-group-summary:focus-within > .rr-summary-lead > .rr-summary-caption > .rr-summary-host,
+details[open] > .rr-group-summary > .rr-summary-lead > .rr-summary-caption > .rr-summary-host {
+    padding-right: calc(var(--rr-tap-min) + 4px);
 }
 
 .rr-summary-caption .rr-caption-edit {
@@ -2128,6 +2140,10 @@ details[open] > .rr-group-summary .rr-caption-edit {
         opacity: 1;
         color: var(--rr-text);
         pointer-events: auto;
+    }
+
+    .rr-summary-lead > .rr-summary-caption > .rr-summary-host {
+        padding-right: calc(var(--rr-tap-min) + 4px);
     }
 }
 
@@ -2206,20 +2222,34 @@ details[open] > .rr-group-summary .rr-caption-edit {
     margin-left: 6px;
 }
 
-/* * Reveal contract (ADR 0036): the open group counts as selected, so the strip
-   shows on hover, keyboard focus or open state — never at rest. */
+/* * Reveal contract (ADR 0031): strip shows on hover/focus/open, never at rest.
+   Hidden it collapses (max-width 0) so the caption owns the width; -8px cancels
+   the flex gap, margin-right restores the last-child inset, clip keeps the ring. */
 @media (hover: hover) {
     .rr-master > details.rr-master-site > .rr-group-summary > .rr-actions {
+        max-width: 0;
+        min-width: 0;
+        overflow: clip;
+        overflow-clip-margin: 4px;
         opacity: 0;
         pointer-events: none;
-        transition: opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+        margin-left: -8px;
+        margin-right: 0;
+        transition:
+            max-width var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            margin-left var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            margin-right var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
     }
 
     .rr-master > details.rr-master-site > .rr-group-summary:hover > .rr-actions,
     .rr-master > details.rr-master-site:focus-within > .rr-group-summary > .rr-actions,
     .rr-master > details.rr-master-site[open] > .rr-group-summary > .rr-actions {
+        max-width: 10rem;
         opacity: 1;
         pointer-events: auto;
+        margin-left: 6px;
+        margin-right: 9px;
     }
 }
 
@@ -2277,7 +2307,10 @@ details[open] > .rr-group-summary .rr-caption-edit {
     grid-template-areas:
         "leading caption actions"
         "urls    urls    urls";
-    column-gap: 8px;
+    /* * No column gap: the leading row owns its 8px inset, the actions row
+       supplies its own left margin only while revealed. A grid gap would keep
+       reserving space next to the collapsed actions track. */
+    column-gap: 0;
     row-gap: 10px;
     align-items: center;
 }
@@ -2288,6 +2321,7 @@ details[open] > .rr-group-summary .rr-caption-edit {
     align-items: center;
     gap: 8px;
     min-width: 0;
+    margin-right: 8px;
 }
 
 .rr-preview-zone details.rr-ed-preview > .rr-group-summary > .rr-summary-lead {
@@ -2363,19 +2397,34 @@ details[open] > .rr-group-summary .rr-caption-edit {
 }
 
 /* * Hover-revealed row actions (ADR 0021 parity). Every selector carries the
-   `details` element so the outer `.rr-ed-preview` section can never match. */
+   `details` element so the outer `.rr-ed-preview` section can never match.
+   Hidden the strip collapses (max-width 0) and the caption track takes the width;
+   the reveal restores the 8px gap and the last-child inset. */
 @media (hover: hover) {
     .rr-preview-zone details.rr-ed-preview > .rr-group-summary > .rr-actions {
+        max-width: 0;
+        min-width: 0;
+        overflow: clip;
+        overflow-clip-margin: 4px;
         opacity: 0;
         pointer-events: none;
-        transition: opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+        margin-left: 0;
+        margin-right: 0;
+        transition:
+            max-width var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            margin-left var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            margin-right var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
     }
 
     .rr-preview-zone details.rr-ed-preview > .rr-group-summary:hover > .rr-actions,
     .rr-preview-zone details.rr-ed-preview:focus-within > .rr-group-summary > .rr-actions,
     .rr-preview-zone details.rr-ed-preview[open] > .rr-group-summary > .rr-actions {
+        max-width: 8rem;
         opacity: 1;
         pointer-events: auto;
+        margin-left: 8px;
+        margin-right: 9px;
     }
 }
 
@@ -2538,22 +2587,33 @@ details.rr-master-rule[open] > .rr-master-rule-summary .rr-tri {
 }
 
 /* * Rule-row actions stay out of the way until the row is hovered, focused, or
-       selected. Site-summary actions stay permanently visible. Touch devices keep
-       everything visible. Hybrid notebooks match `hover: hover`, so the FIRST
-       tap opens the row (native details toggle) and its open state then reveals
-       the actions — an accepted trade-off, not hidden controls. */
+       selected. Hidden they collapse (max-width 0) so the label owns the width;
+       the -8px cancels the row's flex gap. Touch devices keep everything visible.
+       Hybrid notebooks match `hover: hover`, so the FIRST tap opens the row (native
+       details toggle) and its open state then reveals the actions — an accepted
+       trade-off, not hidden controls. */
 @media (hover: hover) {
     .rr-master-rule-summary > .rr-actions {
+        max-width: 0;
+        min-width: 0;
+        overflow: clip;
+        overflow-clip-margin: 4px;
         opacity: 0;
         pointer-events: none;
-        transition: opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+        margin-left: -8px;
+        transition:
+            max-width var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            margin-left var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+            opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
     }
 
     .rr-master-rule-summary:hover > .rr-actions,
     .rr-master-rule:focus-within > .rr-actions,
     details.rr-master-rule[open] > .rr-master-rule-summary > .rr-actions {
+        max-width: 8rem;
         opacity: 1;
         pointer-events: auto;
+        margin-left: 0;
     }
 }
 
@@ -2564,7 +2624,8 @@ details.rr-master-rule[open] > .rr-master-rule-summary .rr-tri {
     .rr-master > details.rr-master-site > .rr-group-summary > .rr-actions,
     .rr-preview-zone details.rr-ed-preview > .rr-group-summary,
     .rr-preview-zone details.rr-ed-preview > .rr-group-summary > .rr-actions,
-    .rr-summary-caption .rr-caption-edit {
+    .rr-summary-caption .rr-caption-edit,
+    .rr-summary-lead > .rr-summary-caption > .rr-summary-host {
         transition: none;
     }
 }
@@ -7181,9 +7242,5 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
 
     .rr-asst-import {
         font-size: 16px;
-    }
-
-    .rr-summary-caption .rr-summary-host {
-        padding-right: 36px;
     }
 }

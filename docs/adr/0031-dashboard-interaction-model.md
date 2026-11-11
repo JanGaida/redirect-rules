@@ -1,6 +1,6 @@
 # ADR 0031: Dashboard interaction model
 
-- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036; amended 2026-11-11 — responsive navigation, phone pane switch, second grip axis)
+- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036; amended 2026-11-11 — responsive navigation, phone pane switch, second grip axis, collapsed row chrome)
 - Amended by: [ADR 0045](0045-mobile-layout-bottom-nav-and-pane-switch.md) (layout breakpoints, bottom bar, pane switch, horizontal grip)
 - Date: 2026-11-02
 - Applies to: the dashboard (`src/lib/gui/App.svelte`, `src/lib/gui/tabs/*.svelte`,
@@ -52,10 +52,12 @@ rule in the Consequences.
    appears on row hover, keyboard focus (`:focus-within`) or an open/active row. A
    site group is active while it is open (`details.rr-master-site[open]`); a rule row
    is active while it is selected, which is the same state as its open fold. Under
-   `hover: none` the strip and pencil stay permanently visible. Visibility uses
-   `opacity` and `pointer-events` only: no layout shift, no hit-box change, and the
-   pencil keeps its tab stop. Move up/down buttons do not exist; the action strip is
-   clone + delete.
+   `hover: none` the strip and pencil stay permanently visible. Hidden chrome
+   collapses horizontally (`max-width: 0`, clipped overflow, collapsed margins), so
+   the title caption/label reclaims the space; reveal expands it with the motion
+   token and the text area shrinks. Row height is unchanged, the buttons keep their
+   tab stops, and `:focus-within` reveals them before focus can land invisibly.
+   Move up/down buttons do not exist; the action strip is clone + delete.
 6. **One description surface.** `InlineCaption.svelte` owns the summary caption, the
    absolute overlay input, the draft/focus/blur cycle and `<summary>`-safe event
    guards. Double-click or F2 opens it; Enter commits, Escape cancels, blur commits;
@@ -67,7 +69,10 @@ rule in the Consequences.
    description" / "Beschreibung bearbeiten") names it while the icon stays
    decorative. The pencil is absolutely positioned and the caption host reserves its
    width via padding, so the caption box, the outward-expanded overlay geometry and
-   the zero-jump contract stay intact.
+   the zero-jump contract stay intact. The title caption host collapses that reserve
+   at rest (pencil hidden) and restores it on reveal; the Input/Output URL-value
+   hosts keep a fixed reserve because their wrapping/clamped panels must not change
+   height.
 7. **Preview rows mirror site rows.** The caption is the trimmed description, else
    `—`; it never falls back to the URL because the URL rows already show it. `Input`
    and `Output` URL rows always render as
@@ -116,6 +121,9 @@ successful` / `test failed` / `no test`) lives in the tooltip and a visually
   decision 8 already accepts for row actions. Keyboard users are unaffected: tabbing
   into the row triggers `:focus-within`, so controls are visible before they are
   reached.
+- Revealing row chrome reflows the single-line caption/label horizontally (the
+  action strip and title-pencil reserve come back); row height never changes, so the
+  zero-jump edit overlay stays stable. URL-value pencils keep a fixed reserve.
 - Descriptions that already contain newlines remain readable (HTML collapses
   whitespace in the caption) but can no longer be authored as multiline.
 - No settings migration exists or is needed: removed fields are dropped by
