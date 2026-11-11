@@ -9,6 +9,8 @@ import {
     ruleLabel,
     SAMPLE_URL,
     splitUrlComponents,
+    summarizeGroupTests,
+    testStatus,
     type PreviewSpan,
     type UrlSegment,
 } from "../preview";
@@ -566,6 +568,74 @@ describe("previewGroupCompiled", () => {
         const url = "https://x.test/a";
 
         expect(previewGroupCompiled(url, site, compileRules([site])[0])).toEqual(previewGroup(url, site));
+    });
+});
+
+// ─── Test-case summary ─────────────────────────────────────────────────────────
+
+describe("test summary", () => {
+    const replaceSite: SiteRule = {
+        siteRegex: "/x\\.test/",
+        rules: [{ kind: "replace", regex: "/old/", substitution: "new" }],
+    };
+
+    it("classifies trimmed output — empty means preview only", () => {
+        expect(testStatus("https://x.test/new", "  https://x.test/new  ")).toBe("success");
+        expect(testStatus("https://x.test/new", "https://x.test/other")).toBe("failed");
+        expect(testStatus("https://x.test/new", "   ")).toBe("none");
+    });
+
+    it("returns the neutral state without entries", () => {
+        expect(summarizeGroupTests({ siteRegex: "/x\\.test/", rules: [] })).toEqual({
+            passed: 0,
+            failed: 0,
+            total: 0,
+            status: "none",
+        });
+    });
+
+    it("ignores preview-only entries and aggregates mixed results", () => {
+        const site: SiteRule = {
+            ...replaceSite,
+            previewEntries: [
+                { url: "https://x.test/old", testOutputUri: "https://x.test/new" },
+                { url: "https://x.test/old", testOutputUri: "" },
+                { url: "https://x.test/old", testOutputUri: "https://x.test/wrong" },
+            ],
+        };
+        expect(summarizeGroupTests(site)).toEqual({ passed: 1, failed: 1, total: 2, status: "partial" });
+    });
+
+    it("reports all-failed groups as failed", () => {
+        const site: SiteRule = {
+            ...replaceSite,
+            previewEntries: [
+                { url: "https://x.test/old", testOutputUri: "https://x.test/wrong" },
+                { url: "https://x.test/old", testOutputUri: "https://x.test/other" },
+            ],
+        };
+        expect(summarizeGroupTests(site)).toMatchObject({ passed: 0, failed: 2, total: 2, status: "failed" });
+    });
+
+    it("tests the WHOLE group chain, not just one rule", () => {
+        const site: SiteRule = {
+            siteRegex: "/x\\.test/",
+            rules: [
+                { kind: "replace", regex: "/old/", substitution: "mid" },
+                { kind: "replace", regex: "/mid/", substitution: "final" },
+            ],
+            previewEntries: [{ url: "https://x.test/old", testOutputUri: "https://x.test/final" }],
+        };
+        expect(summarizeGroupTests(site)).toMatchObject({ passed: 1, failed: 0, status: "success" });
+    });
+
+    it("keeps disabled groups testable", () => {
+        const site: SiteRule = {
+            ...replaceSite,
+            disabled: true,
+            previewEntries: [{ url: "https://x.test/old", testOutputUri: "https://x.test/new" }],
+        };
+        expect(summarizeGroupTests(site).status).toBe("success");
     });
 });
 

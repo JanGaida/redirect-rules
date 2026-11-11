@@ -484,6 +484,59 @@ export function previewGroupCompiled(url: string, site: SiteRule, group: Compile
     };
 }
 
+// ─── Test-case summary — group-scoped pass/fail counts ───────────────────────
+
+/** One preview entry's test verdict — `none` = preview-only (no expected output). */
+export type TestStatus = "success" | "failed" | "none";
+
+/** Aggregated test state of one site group. */
+export interface GroupTestSummary {
+    passed: number;
+    failed: number;
+    /** Real tests only — entries with a non-empty expected output. */
+    total: number;
+    /** `partial` = some pass and some fail (the amber dot). */
+    status: "success" | "partial" | "failed" | "none";
+}
+
+/**
+ * Classifies one preview entry against the chain's final URL — the SAME trim
+ * comparison the preview rows use.
+ *
+ * @param finalUrl       - The chain's final URL.
+ * @param expectedOutput - The entry's expected output (`""` = preview only).
+ */
+export function testStatus(finalUrl: string, expectedOutput: string): TestStatus {
+    const expected = expectedOutput.trim();
+    if (expected === "") return "none";
+    return finalUrl.trim() === expected ? "success" : "failed";
+}
+
+/**
+ * Summarizes a group's test cases: compiles the chain ONCE and replays every
+ * preview entry. Preview-only entries (empty expected output) are ignored.
+ *
+ * @param site - The group whose `previewEntries` are tested.
+ */
+export function summarizeGroupTests(site: SiteRule): GroupTestSummary {
+    const entries = site.previewEntries ?? [];
+    if (entries.length === 0) {
+        return { passed: 0, failed: 0, total: 0, status: "none" };
+    }
+    // * Disabled groups stay testable: the indicator mirrors the authoring preview.
+    const group = compileRules([site], { includeDisabled: true })[0];
+    let passed = 0;
+    let failed = 0;
+    for (const entry of entries) {
+        const status = testStatus(previewGroupCompiled(entry.url, site, group).finalUrl, entry.testOutputUri);
+        if (status === "success") passed += 1;
+        else if (status === "failed") failed += 1;
+    }
+    const total = passed + failed;
+    const status = total === 0 ? "none" : failed === 0 ? "success" : passed === 0 ? "failed" : "partial";
+    return { passed, failed, total, status };
+}
+
 /**
  * Two-sided diff spans: common prefix/suffix stay plain, the differing middle
  * is red on the before side and green on the after side.
