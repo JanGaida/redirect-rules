@@ -49,34 +49,35 @@ The table is generated — never edit it by hand:
 
 <!-- ADR-INDEX:START -->
 
-| ADR                                                           | Decision                                                                              | Status   | Date       |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | ---------- |
-| [0001](../adr/0001-pure-engine-split.md)                      | Pure redirect engine split from the side-effecting watcher                            | accepted | 2026-10-25 |
-| [0002](../adr/0002-typed-rule-kinds.md)                       | Typed rule kinds — `replace` and `appendQuery` — over magic substitution tokens       | accepted | 2026-10-25 |
-| [0003](../adr/0003-blank-storage-restart.md)                  | Blank storage restart — no migration from the legacy settings keys                    | amended  | 2026-10-25 |
-| [0004](../adr/0004-synthetic-e2e-in-ci.md)                    | Committed synthetic E2E fixtures — E2E runs in CI                                     | accepted | 2026-10-25 |
-| [0008](../adr/0008-release-please-automation-contract.md)     | Release-please automation contract — bump target, PR-update rule, in-workflow assets  | amended  | 2026-10-25 |
-| [0009](../adr/0009-squash-merge-and-pr-title-contract.md)     | Squash-only merges with Conventional-Commits PR titles                                | amended  | 2026-10-25 |
-| [0011](../adr/0011-dashboard-hash-takeover.md)                | Dashboard = hash-takeover page (GM_openInTab + document-start takeover)               | amended  | 2026-10-26 |
-| [0012](../adr/0012-dashboard-host-stub.md)                    | Dashboard host stub and the `dashboardHost` selector                                  | accepted | 2026-11-02 |
-| [0013](../adr/0013-manual-theme-toggle.md)                    | Manual theme toggle ships — persisted tri-state (auto/dark/light)                     | accepted | 2026-10-27 |
-| [0014](../adr/0014-static-text-build-time-base64-encoding.md) | Build-time Base64 encoding for static text literals that must not surface as raw text | accepted | 2026-10-31 |
-| [0015](../adr/0015-dev-flow-and-script-identity.md)           | Dev flow and single userscript identity                                               | accepted | 2026-11-01 |
-| [0016](../adr/0016-motion-and-animation-strategy.md)          | Motion and animation strategy                                                         | amended  | 2026-10-31 |
-| [0017](../adr/0017-shared-compiled-step-executor.md)          | Shared compiled-step executor for engine and preview                                  | accepted | 2026-11-02 |
-| [0018](../adr/0018-ui-ux-remediation.md)                      | UI/UX remediation — durable accessibility and layout contracts                        | accepted | 2026-11-02 |
-| [0019](../adr/0019-checkpoint-rule-kind.md)                   | Checkpoint rule kind for in-group flow control                                        | accepted | 2026-11-02 |
-| [0020](../adr/0020-multi-dashboard-autosave.md)               | Multi-dashboard tabs and the autosave/session workflow                                | amended  | 2026-10-27 |
-| [0031](../adr/0031-dashboard-interaction-model.md)            | Dashboard interaction model                                                           | amended  | 2026-11-02 |
-| [0032](../adr/0032-touch-input-support.md)                    | Touch input support                                                                   | accepted | 2026-11-02 |
-| [0035](../adr/0035-assistant-tab.md)                          | Rule configuration assistant as a rail tab                                            | amended  | 2026-11-03 |
-| [0037](../adr/0037-settings-export-import-dialog.md)          | Settings export/import as one dialog with raw export and strict merge                 | accepted | 2026-11-03 |
-| [0038](../adr/0038-per-group-enable-disable.md)               | Per-group enable/disable (group level only)                                           | accepted | 2026-11-04 |
-| [0039](../adr/0039-delete-undo-toast.md)                      | Delete without confirmation — single-slot undo toast                                  | accepted | 2026-11-04 |
-| [0040](../adr/0040-skipped-step-visibility-precedence.md)     | Skipped-step visibility — persisted global default, per-group override                | amended  | 2026-11-04 |
-| [0041](../adr/0041-performance-mode.md)                       | Performance mode — stats-off and non-destructive silent logging                       | accepted | 2026-11-05 |
-| [0043](../adr/0043-logging-contract.md)                       | Logging contract — scoped logger, sparse info, complete debug, fast silent path       | accepted | 2026-11-05 |
-| [0044](../adr/0044-remove-query-rule-kind.md)                 | `removeQuery` rule kind for key-based query removal                                   | accepted | 2026-11-09 |
+| ADR                                                             | Decision                                                                              | Status   | Date       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | ---------- |
+| [0001](../adr/0001-pure-engine-split.md)                        | Pure redirect engine split from the side-effecting watcher                            | accepted | 2026-10-25 |
+| [0002](../adr/0002-typed-rule-kinds.md)                         | Typed rule kinds — `replace` and `appendQuery` — over magic substitution tokens       | accepted | 2026-10-25 |
+| [0003](../adr/0003-blank-storage-restart.md)                    | Blank storage restart — no migration from the legacy settings keys                    | amended  | 2026-10-25 |
+| [0004](../adr/0004-synthetic-e2e-in-ci.md)                      | Committed synthetic E2E fixtures — E2E runs in CI                                     | accepted | 2026-10-25 |
+| [0008](../adr/0008-release-please-automation-contract.md)       | Release-please automation contract — bump target, PR-update rule, in-workflow assets  | amended  | 2026-10-25 |
+| [0009](../adr/0009-squash-merge-and-pr-title-contract.md)       | Squash-only merges with Conventional-Commits PR titles                                | amended  | 2026-10-25 |
+| [0011](../adr/0011-dashboard-hash-takeover.md)                  | Dashboard = hash-takeover page (GM_openInTab + document-start takeover)               | amended  | 2026-10-26 |
+| [0012](../adr/0012-dashboard-host-stub.md)                      | Dashboard host stub and the `dashboardHost` selector                                  | accepted | 2026-11-02 |
+| [0013](../adr/0013-manual-theme-toggle.md)                      | Manual theme toggle ships — persisted tri-state (auto/dark/light)                     | accepted | 2026-10-27 |
+| [0014](../adr/0014-static-text-build-time-base64-encoding.md)   | Build-time Base64 encoding for static text literals that must not surface as raw text | accepted | 2026-10-31 |
+| [0015](../adr/0015-dev-flow-and-script-identity.md)             | Dev flow and single userscript identity                                               | accepted | 2026-11-01 |
+| [0016](../adr/0016-motion-and-animation-strategy.md)            | Motion and animation strategy                                                         | amended  | 2026-10-31 |
+| [0017](../adr/0017-shared-compiled-step-executor.md)            | Shared compiled-step executor for engine and preview                                  | accepted | 2026-11-02 |
+| [0018](../adr/0018-ui-ux-remediation.md)                        | UI/UX remediation — durable accessibility and layout contracts                        | accepted | 2026-11-02 |
+| [0019](../adr/0019-checkpoint-rule-kind.md)                     | Checkpoint rule kind for in-group flow control                                        | accepted | 2026-11-02 |
+| [0020](../adr/0020-multi-dashboard-autosave.md)                 | Multi-dashboard tabs and the autosave/session workflow                                | amended  | 2026-10-27 |
+| [0031](../adr/0031-dashboard-interaction-model.md)              | Dashboard interaction model                                                           | amended  | 2026-11-02 |
+| [0032](../adr/0032-touch-input-support.md)                      | Touch input support                                                                   | amended  | 2026-11-02 |
+| [0035](../adr/0035-assistant-tab.md)                            | Rule configuration assistant as a rail tab                                            | amended  | 2026-11-03 |
+| [0037](../adr/0037-settings-export-import-dialog.md)            | Settings export/import as one dialog with raw export and strict merge                 | accepted | 2026-11-03 |
+| [0038](../adr/0038-per-group-enable-disable.md)                 | Per-group enable/disable (group level only)                                           | accepted | 2026-11-04 |
+| [0039](../adr/0039-delete-undo-toast.md)                        | Delete without confirmation — single-slot undo toast                                  | accepted | 2026-11-04 |
+| [0040](../adr/0040-skipped-step-visibility-precedence.md)       | Skipped-step visibility — persisted global default, per-group override                | amended  | 2026-11-04 |
+| [0041](../adr/0041-performance-mode.md)                         | Performance mode — stats-off and non-destructive silent logging                       | accepted | 2026-11-05 |
+| [0043](../adr/0043-logging-contract.md)                         | Logging contract — scoped logger, sparse info, complete debug, fast silent path       | accepted | 2026-11-05 |
+| [0044](../adr/0044-remove-query-rule-kind.md)                   | `removeQuery` rule kind for key-based query removal                                   | accepted | 2026-11-09 |
+| [0045](../adr/0045-mobile-layout-bottom-nav-and-pane-switch.md) | Mobile layout — bottom navigation and phone pane switch                               | accepted | 2026-11-11 |
 
 <!-- ADR-INDEX:END -->
 

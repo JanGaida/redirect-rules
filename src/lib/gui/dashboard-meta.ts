@@ -5,10 +5,12 @@
 //   stub's viewport meta. Without it tablets fall back to the ~980px layout
 //   viewport and the dashboard renders zoomed-out.
 // * Idempotent: updates an existing meta instead of stacking duplicates.
+// * `viewport-fit=cover` is required or iOS reports every
+//   `env(safe-area-inset-*)` as 0 (bottom bar + toast padding).
 // * Never `user-scalable=no` — pinch zoom stays available (WCAG 1.4.4).
 
 /** Zoom-left content for the dashboard's own viewport. */
-const VIEWPORT_CONTENT = "width=device-width, initial-scale=1";
+const VIEWPORT_CONTENT = "width=device-width, initial-scale=1, viewport-fit=cover";
 
 /** Ensures exactly one device-width viewport meta in `doc`. */
 export function ensureViewportMeta(doc: Document): void {

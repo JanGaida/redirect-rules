@@ -1,6 +1,7 @@
 # ADR 0032: Touch input support
 
-- Status: accepted
+- Status: accepted (amended 2026-11-11 — viewport-fit=cover, phone bottom bar and pane-switch targets)
+- Amended by: [ADR 0045](0045-mobile-layout-bottom-nav-and-pane-switch.md) (viewport-fit=cover, `--rr-bottom-tap`, horizontal grip rail)
 - Date: 2026-11-02
 - Applies to: the dashboard (`src/lib/gui/App.svelte`, `src/lib/gui/tabs/*.svelte`,
   `src/lib/gui/components/*.svelte`, `src/lib/gui/drag-controller.ts`,

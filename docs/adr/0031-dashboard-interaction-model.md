@@ -1,6 +1,7 @@
 # ADR 0031: Dashboard interaction model
 
-- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036)
+- Status: accepted (2026-11-02; amended 2026-11-03 — preview summary rows and pills; consolidated 2026-11-06 — absorbs ADR 0033 and ADR 0036; amended 2026-11-11 — responsive navigation, phone pane switch, second grip axis)
+- Amended by: [ADR 0045](0045-mobile-layout-bottom-nav-and-pane-switch.md) (layout breakpoints, bottom bar, pane switch, horizontal grip)
 - Date: 2026-11-02
 - Applies to: the dashboard (`src/lib/gui/App.svelte`, `src/lib/gui/tabs/*.svelte`,
   `src/lib/gui/components/*.svelte`, `src/lib/gui/drag-controller.ts`,

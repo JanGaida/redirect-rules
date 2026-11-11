@@ -56,6 +56,22 @@ describe("touch CSS contract", () => {
         expect(hasRule(".rr-drag-v", /touch-action:\s*none/)).toBe(true);
     });
 
+    it("adds the horizontal grip axis for the stacked split", () => {
+        expect(rootBlock).toMatch(/--rr-explorer-h:\s*48vh/);
+        expect(hasRule(".rr-drag-h", /touch-action:\s*none/)).toBe(true);
+        expect(hasRule(".rr-drag-h", /cursor:\s*row-resize/)).toBe(true);
+        expect(hasRule(".rr-drag-h", /display:\s*none/)).toBe(true);
+    });
+
+    it("sizes the phone bottom bar and pane switch for fingers", () => {
+        expect(pxToken(rootBlock, "--rr-bottom-tap")).toBeGreaterThanOrEqual(44);
+        expect(pxToken(coarseBlock, "--rr-bottom-tap")).toBeGreaterThanOrEqual(48);
+        expect(hasRule(".rr-rail-tab", /min-height:\s*var\(--rr-bottom-tap\)/)).toBe(true);
+        expect(hasRule(".rr-pane-switch", /display:\s*none/)).toBe(true);
+        expect(css).toMatch(/env\(safe-area-inset-bottom\)/);
+        expect(css).toMatch(/env\(safe-area-inset-top\)/);
+    });
+
     it("scopes the coarse-pointer field size to one shared token", () => {
         expect(rootBlock).toMatch(/--rr-field-fs:\s*0\.95em/);
         expect(coarseBlock).toMatch(/--rr-field-fs:\s*16px/);
