@@ -524,7 +524,7 @@ sequenceDiagram
     U->>P: click stopwatch (fast → normal → slow)
     P->>A: settings.autosaveDelayMs = next canonical delay
     U->>A: any settings change
-    A->>X: schedule() — $effect re-arms the configured debounce
+    A->>X: untracked schedule() — the $effect re-arms the configured debounce
     X-->>I: pendingSeq + pendingDelayMs (header ring fills clockwise)
     X->>V: gate check when the timer fires<br/>(invalidRegexCount + empty-row scan)
     alt gate blocks (invalid regex / empty row)
@@ -561,6 +561,12 @@ sequenceDiagram
   (`validation.ts`). A rejected GM write is a third pause reason (`write`):
   `saveSettings` returns false, `savedSnapshot` does NOT advance, and the next
   change or the close `flush()` retries.
+- EFFECT contract: the App autosave effect tracks ONLY the dirty comparison
+  (`settingsJson !== savedSnapshot`) and calls `schedule()` untracked.
+  `schedule()` reads and writes `autosave.*`; its arm counter is a module-local
+  variable (`pendingSeqCounter`) instead of `autosave.pendingSeq += 1` — a
+  tracked read-modify-write would re-invalidate the caller forever and Svelte
+  aborts with `effect_update_depth_exceeded`.
 - CLOSE save policy (ADR 0024): there is no save button. Close/ESC/tab close call
   `flush()` — a SYNCHRONOUS GM write using the SAME gate; incomplete rows pause
   instead of being pruned, and a paused-dirty state still raises the confirm.
@@ -1207,4 +1213,4 @@ URL/chain divider.
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — changelog.ts (release-heading link unwrap), InfoTab.svelte, StatsTab.svelte banner inset, dashboard.css, App.svelte, RulesTab.svelte, RuleEditor.svelte, icon.ts, preview.ts, motion.ts
+Verified: 2026-11-11 — changelog.ts (release-heading link unwrap), InfoTab.svelte, StatsTab.svelte banner inset, dashboard.css, App.svelte, autosave.svelte.ts, RulesTab.svelte, RuleEditor.svelte, icon.ts, preview.ts, motion.ts
