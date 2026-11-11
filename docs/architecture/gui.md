@@ -1034,16 +1034,16 @@ details card (author, repository, license with the `balance` icon, build SHA/dat
 as a `dl` grid), and a changelog card. The build row carries a copy button for the
 12-character SHA and an `open_in_new` commit link (hidden when the build has no
 git hash). The copy-debug CTA was removed; build SHA/date remain in the details
-card. The renderer moved to `src/lib/gui/changelog.ts` as a pure `parseChangelog`
-
-- `renderChangelog` pair: each `##` release becomes a `.rr-changelog-release`
-  `<details>` (all folded until the user opens one, newest marked `is-latest`) with version, date, current
-  badge, and per-type counters; the body groups entries under localized type
-  headings with icons, counts, and scope chips. The release-please preamble stays
-  as a muted lead line. There is no inner scroll region and no sticky heading — the
-  tab body is the only scroll container. `safeUrl` rejects protocol-relative (`//host`)
-  links and any scheme other than `http(s)`; only same-origin `/`, `./`, and `#`
-  targets pass, and rejected values fall back to `#`.
+card. The renderer moved to `src/lib/gui/changelog.ts` as a pure
+`parseChangelog` + `renderChangelog` pair: each `##` release becomes a `.rr-changelog-release`
+`<details>` (all folded until the user opens one, newest marked `is-latest`) with version, date, current
+badge, and per-type counters; the body groups entries under localized type
+headings with icons, counts, and scope chips. release-please may link the heading
+version to a compare URL — the parser keeps only the version text. A preamble, if
+present, stays a muted lead line; the shipped `CHANGELOG.md` has none. There is no
+inner scroll region and no sticky heading — the tab body is the only scroll container.
+`safeUrl` rejects protocol-relative (`//host`) links and any scheme other than `http(s)`;
+only same-origin `/`, `./`, and `#` targets pass, and rejected values fall back to `#`.
 
 Settings tab hero + cards (03.11.; motion presets: ADR 0016): the former Config tab's
 five native dropdowns and three permanently-open `<details>` groups were replaced by a
@@ -1207,4 +1207,4 @@ URL/chain divider.
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, icon.ts, dashboard.css, InlineCaption.svelte, caption-edit-gesture.ts, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, transfer view, motion.ts
+Verified: 2026-11-11 — changelog.ts (release-heading link unwrap), InfoTab.svelte, StatsTab.svelte banner inset, dashboard.css, App.svelte, RulesTab.svelte, RuleEditor.svelte, icon.ts, preview.ts, motion.ts

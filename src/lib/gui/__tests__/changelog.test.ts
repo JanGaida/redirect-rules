@@ -51,6 +51,14 @@ describe("parseChangelog", () => {
         expect(plain.releases[0]).toMatchObject({ version: "1.2.3", date: null });
     });
 
+    it("unwraps a linked release heading to its version text", () => {
+        const dated = parseChangelog("## [1.2.3](https://example.com/compare/v1.2.2...v1.2.3) (2026-10-26)");
+        const plain = parseChangelog("## [1.2.3](https://example.com/compare/v1.2.2...v1.2.3)");
+
+        expect(dated.releases[0]).toMatchObject({ version: "1.2.3", date: "2026-10-26" });
+        expect(plain.releases[0]).toMatchObject({ version: "1.2.3", date: null });
+    });
+
     it("maps known sections and keeps unknown ones under their original label", () => {
         const model = parseChangelog(
             [
@@ -138,6 +146,13 @@ describe("renderChangelog", () => {
 
         expect(html).toContain('<span class="rr-changelog-version">v1.2.3</span>');
         expect(html).toContain('<time class="rr-changelog-date" datetime="2026-10-26">Oct 26, 2026</time>');
+    });
+
+    it("renders a linked release heading as a plain version pill", () => {
+        const html = render("## [1.2.3](https://example.com/compare/v1.2.2...v1.2.3) (2026-10-26)\n\n- item");
+
+        expect(html).toContain('<span class="rr-changelog-version">v1.2.3</span>');
+        expect(html).not.toContain("](https://example.com/compare");
     });
 
     it("renders without a date when it is missing", () => {

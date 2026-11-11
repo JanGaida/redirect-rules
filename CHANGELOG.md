@@ -1,10 +1,5 @@
 # Changelog
 
-All notable changes to this project are documented in this file. The file is maintained
-by [release-please](https://github.com/googleapis/release-please) — the automation
-contract (bump target, PR-update rule, in-workflow assets) is
-[ADR 0008](docs/adr/0008-release-please-automation-contract.md).
-
 ## [1.1.0](https://github.com/JanGaida/redirect-rules/compare/v1.0.0...v1.1.0) (2026-11-11)
 
 

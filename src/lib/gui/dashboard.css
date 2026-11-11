@@ -6483,6 +6483,7 @@ body.rr-dragging .rr-drag-handle {
     display: flex;
     align-items: center;
     gap: 12px;
+    margin-top: 12px;
     padding: 12px 16px;
     border: 1px solid var(--rr-warn);
     border-radius: var(--rr-radius);
