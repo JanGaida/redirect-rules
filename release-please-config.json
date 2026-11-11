@@ -6,7 +6,6 @@
             "changelog-path": "CHANGELOG.md",
             "package-name": "redirect-rules",
             "include-component-in-tag": false,
-            "skip-changelog": true,
             "extra-files": [
                 {
                     "type": "json",
