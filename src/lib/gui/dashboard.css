@@ -1950,7 +1950,8 @@ details.rr-master-site.rr-autosave-paused {
    hover-revealed toggle glyph mirrors it (accent = on, muted = off). */
 details.rr-master-site.rr-site-disabled > .rr-group-summary .rr-summary-caption,
 details.rr-master-site.rr-site-disabled > .rr-group-summary .rr-tri,
-details.rr-master-site.rr-site-disabled > .rr-group-summary .rr-drag-handle {
+details.rr-master-site.rr-site-disabled > .rr-group-summary .rr-drag-handle,
+details.rr-master-site.rr-site-disabled > .rr-group-summary .rr-test-indicator {
     opacity: 0.55;
 }
 
@@ -2642,6 +2643,38 @@ details.rr-master-rule[open] > .rr-master-rule-summary .rr-tri {
 
 .rr-chip-text {
     font-size: var(--rr-fs-xs);
+}
+
+/* ─── MARK: Group test indicator ────────────────────────────────────────── */
+
+/* * One aggregated dot before the group title: green = all pass, amber = mixed,
+   red = all fail, faint = no real tests. Several tests never multiply the dot. */
+.rr-test-indicator {
+    flex: none;
+}
+
+.rr-test-dot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.rr-test-dot--success {
+    background: var(--rr-ok);
+}
+
+.rr-test-dot--partial {
+    background: var(--rr-warn);
+}
+
+.rr-test-dot--failed {
+    background: var(--rr-danger);
+}
+
+.rr-test-dot--none {
+    background: var(--rr-faint);
 }
 
 .rr-chip-checkpoint-continue {

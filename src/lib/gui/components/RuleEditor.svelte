@@ -64,7 +64,7 @@
     import { store } from "../../stores/settings.svelte";
     import { isValidRegex, regexToReadableLiteral } from "../../core/parse-regex";
     import { compileRules } from "../../core/redirect-engine";
-    import { previewGroupCompiled } from "../../core/preview";
+    import { previewGroupCompiled, testStatus } from "../../core/preview";
     import { switchRuleKind } from "../rule-kind-drafts";
     import { motionFastDuration } from "../motion";
     import { createLogger } from "../../core/log";
@@ -169,8 +169,7 @@
             // * Keep the old metric meaning: shared compile + this entry's replay.
             const ms = compileMs + (performance.now() - t0);
             const msText = ms < 1 ? t("preview.msFast") : formatMs.format(ms);
-            const expected = entry.testOutputUri.trim();
-            const status = expected === "" ? "none" : chain.finalUrl.trim() === expected ? "success" : "failed";
+            const status = testStatus(chain.finalUrl, entry.testOutputUri);
             // * Shared executor result; empty gates keep the match-all authoring display
             //   (compileRules drops them, so chain.gateMatched is false).
             const siteGateMatches = site.siteRegex === "" ? true : chain.gateMatched;

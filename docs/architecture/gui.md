@@ -335,6 +335,12 @@ details.rr-ed-preview` (ADR 0030) — the `details` element is required because
   `isSiteIncomplete`); invalid regexes are the red marker, and a mixed group
   shows both. Autosave still pauses via `isSitePersistBlocked`; the status line
   and `rules.blockingHint` remain the global persistence signal.
+- Group test indicator (11.11.): `summarizeGroupTests` (`preview.ts`) derives
+  pass/fail counts from the group's real test entries (non-empty
+  `testOutputUri`; preview-only entries are ignored). ONE aggregated dot sits
+  BEFORE the title — never one dot per test: green = all pass, amber = mixed,
+  red = all fail, faint = no real tests. Disabled groups stay testable and keep
+  their verdict.
 - Inline editor fields (R8/R9/R11/R12; reworked 02.11., ADR 0022): ONE column —
   inline field ROWS (`.rr-ed-row`, fixed label column) for kind, regex and
   substitution/params (label LEFT of the field, no stacking). Both reference
@@ -1181,5 +1187,6 @@ URL/chain divider.
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
 Verified: 2026-11-11 — against `App.svelte`, `RulesTab.svelte`, `dashboard.css`
-(mobile bottom bar, pane switch, both grips), `dashboard-meta.ts`, `preview.ts`,
-transfer view, `motion.ts`, `chat-template.ts`.
+(mobile bottom bar, pane switch, both grips), `dashboard-meta.ts`, `RuleEditor.svelte`, 
+`preview.ts`, `GroupTestIndicator.svelte`, `dashboard.css`, transfer view, `motion.ts`, 
+`chat-template.ts`.

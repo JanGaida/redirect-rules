@@ -38,7 +38,7 @@
     import { showToast, UNDO_TOAST_MS } from "../ui-state.svelte";
     import { store } from "../../stores/settings.svelte";
     import { isValidRegex, isNotationRegex, escapeUriForRegex, regexToReadableLiteral } from "../../core/parse-regex";
-    import { ruleLabel } from "../../core/preview";
+    import { ruleLabel, summarizeGroupTests } from "../../core/preview";
     import { invalidRegexCount, isSiteIncomplete, siteHasInvalidRegex } from "../validation";
     import { moveIndex, remapIndex } from "../reorder";
     import { createListDrag, type DropTarget } from "../drag-controller";
@@ -51,6 +51,7 @@
     import DragHandle from "../components/DragHandle.svelte";
     import InlineCaption from "../components/InlineCaption.svelte";
     import ChoiceGroup from "../components/ChoiceGroup.svelte";
+    import GroupTestIndicator from "../components/GroupTestIndicator.svelte";
 
     import type { SiteRule, UrlRule } from "../../core/settings";
     import type { IconName } from "../icon";
@@ -179,7 +180,9 @@
 
     const displaySites = $derived.by(() => {
         const needle = filter.trim().toLowerCase();
-        return indexedSites.filter(({ site }) => siteMatches(site, needle));
+        return indexedSites
+            .filter(({ site }) => siteMatches(site, needle))
+            .map(({ site, si }) => ({ site, si, tests: summarizeGroupTests(site) }));
     });
 
     function reorderSites(from: number, to: number): void {
@@ -796,7 +799,7 @@
             <p class="rr-hint">{t("rules.filter.empty")}</p>
         {/if}
 
-        {#each displaySites as { site, si }, pos (site)}
+        {#each displaySites as { site, si, tests }, pos (site)}
             {@const groupInvalid = siteHasInvalidRegex(site)}
             <!-- * SINGLE-OPEN accordion: folded on mount, only ONE group
                      open — unfolding binds the preview to that group (no rule
@@ -835,6 +838,7 @@
                     {/if}
                     <Icon name="chevronRight" class="rr-tri" />
                     <span class="rr-summary-lead">
+                        <GroupTestIndicator summary={tests} disabled={site.disabled === true} />
                         <InlineCaption
                             caption={siteCaption(site)}
                             value={site.description ?? ""}
