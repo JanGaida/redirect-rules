@@ -24,9 +24,12 @@
      * * The status line now lives in the App header; the reference triggers live
      *   in the field trailing affixes (anchored popovers). The LLM hand-off
      *   moved to its own tab.
-     * * Drag handle: the vertical grip resizes the editor column width
-     *   (--rr-explorer-w, default 50/50 with the preview) per SESSION via a
-     *   CSS var (persistence deferred, see gui.md).
+     * * Grips: the vertical grip resizes the explorer width
+     *   (--rr-explorer-w, 50/50 default); the horizontal grip resizes its height
+     *   (--rr-explorer-h, 48vh default) in the stacked split. Session-local CSS
+     *   vars (persistence deferred, see gui.md).
+     * * Phone panes: ≤760px the split collapses into ONE visible pane behind a
+     *   segmented switch; both panes stay mounted (visibility, never display).
      * * "Create new Rule" requests (menu entry at open time or forwarded to
      *   the already-open dashboard) prefill a new site rule gated on the url's
      *   host — request ids guard against double-prefill.
@@ -47,9 +50,11 @@
     import RowActions from "../components/RowActions.svelte";
     import DragHandle from "../components/DragHandle.svelte";
     import InlineCaption from "../components/InlineCaption.svelte";
+    import ChoiceGroup from "../components/ChoiceGroup.svelte";
     import GroupTestIndicator from "../components/GroupTestIndicator.svelte";
 
     import type { SiteRule, UrlRule } from "../../core/settings";
+    import type { IconName } from "../icon";
     import { onDestroy } from "svelte";
     import { flip } from "svelte/animate";
     import { siteCaption } from "../site-caption";
@@ -145,6 +150,15 @@
     // * Explorer filter — trims to a needle, matched case-insensitively
     // against the VISIBLE labels (site gate + rule regex/params).
     let filter = $state("");
+
+    // * Phone pane switch (≤760px): both panes stay mounted in one grid cell and
+    //   only visibility flips — scroll position + editor state survive. The
+    //   glyphs keep the two small segments identifiable on narrow phones.
+    let pane = $state<"rules" | "preview">("rules");
+    const paneOptions: Array<{ value: string; label: string; icon: IconName }> = $derived([
+        { value: "rules", label: t("tabs.rules"), icon: "developerGuide" },
+        { value: "preview", label: t("rules.pane.preview"), icon: "visibility" },
+    ]);
 
     // * Inline description edit: the shared InlineCaption owns the
     // draft/focus cycle; the parent only tracks WHICH group is editing.
@@ -426,7 +440,8 @@
     /**
      * Selects a rule — selection IS the unfolded row. Used by rule-row
      * toggles and preview chain steps; a chain-step click also scrolls the row
-     * into view (no focus steal — keyboard chain navigation stays intact).
+     * into view. On phones the explorer pane may be hidden, so it flips back to
+     * "rules" and focuses the row; desktop never steals focus.
      */
     function selectRule(siteIndex: number, ruleIndex: number): void {
         const changed = !selection || selection.siteIndex !== siteIndex || selection.ruleIndex !== ruleIndex;
@@ -434,7 +449,20 @@
         openSite = siteIndex;
         selection = { siteIndex, ruleIndex };
         if (changed) rememberSelection(selection);
-        requestAnimationFrame(() => scrollRuleIntoView(siteIndex, ruleIndex));
+        // * Only the phone pane switch hides the explorer; the desktop layout
+        //   keeps it visible, so this branch never fires there.
+        const paneHidden = masterEl !== null && getComputedStyle(masterEl).visibility === "hidden";
+        if (paneHidden) pane = "rules";
+        requestAnimationFrame(() => {
+            if (paneHidden) {
+                layoutEl
+                    ?.querySelector<HTMLElement>(
+                        `.rr-master-rule[data-site="${siteIndex}"][data-rule="${ruleIndex}"] > summary`,
+                    )
+                    ?.focus({ preventScroll: true });
+            }
+            scrollRuleIntoView(siteIndex, ruleIndex);
+        });
     }
 
     /** Opens the inline editor row inside the explorer's own scroll container. */
@@ -561,17 +589,37 @@
     /** The Explorer|Preview grid container — CSS vars are set on it directly. */
     let layoutEl = $state<HTMLElement | null>(null);
 
+    // * Measured explorer share (percent) drives `aria-valuenow` on both grips:
+    //   the CSS clamp can differ from the stored px value, so read the box.
+    let explorerWidthPct = $state(50);
+    let explorerHeightPct = $state(48);
+
     // * measureSiteShell removed — open height is animated by slide.
     function clamp(value: number, min: number, max: number): number {
         return Math.min(max, Math.max(min, value));
     }
 
+    /** Refreshes both separator values from the laid-out boxes (no observer). */
+    function measurePanes(): void {
+        const container = layoutEl;
+        const master = container?.querySelector<HTMLElement>(".rr-master");
+        if (!container || !master) return;
+        const rect = container.getBoundingClientRect();
+        const paneRect = master.getBoundingClientRect();
+        if (rect.width > 0) explorerWidthPct = Math.round((paneRect.width / rect.width) * 100);
+        if (rect.height > 0) explorerHeightPct = Math.round((paneRect.height / rect.height) * 100);
+    }
+
     /**
-     * Attach-and-track pointer resizing for the vertical grip — the handle sets
-     * the width CSS var live; bounds are clamped (editor column ≥420px).
-     * Session-sized var (persistence deferred, see gui.md).
+     * Attach-and-track pointer resizing for one grip axis — the handle sets its
+     * CSS var live; bounds are clamped by the caller. Session-sized
+     * (persistence deferred, see gui.md).
      */
-    function makeDrag(handle: HTMLElement, onMove: (e: PointerEvent) => void): () => void {
+    function makeDrag(
+        handle: HTMLElement,
+        cursor: "col-resize" | "row-resize",
+        onMove: (e: PointerEvent) => void,
+    ): () => void {
         const move = (ev: PointerEvent): void => onMove(ev);
         const end = (): void => {
             handle.removeEventListener("pointermove", move);
@@ -584,10 +632,15 @@
         };
         const down = (e: PointerEvent): void => {
             e.preventDefault();
-            handle.setPointerCapture(e.pointerId);
+            // * Synthetic pointers (E2E) are never "active" — capture is best-effort.
+            try {
+                handle.setPointerCapture(e.pointerId);
+            } catch {
+                // * No active pointer — the handle listeners still drive the drag.
+            }
             handle.classList.add("active");
             document.body.classList.add("rr-dragging");
-            document.body.style.cursor = "col-resize";
+            document.body.style.cursor = cursor;
             handle.addEventListener("pointermove", move);
             handle.addEventListener("pointerup", end);
             handle.addEventListener("pointercancel", end);
@@ -600,7 +653,7 @@
         };
     }
 
-    /** Keyboard resize — the grip is a focusable separator (a11y). */
+    /** Keyboard resize for the vertical grip — ←/→ (24px, Shift 64px). */
     function nudgeExplorer(delta: number): void {
         if (!layoutEl) return;
         const master = layoutEl.querySelector<HTMLElement>(".rr-master");
@@ -609,6 +662,18 @@
         // * 420px floor: the left column hosts the inline rule editor.
         const next = clamp(master.getBoundingClientRect().width + delta, 420, rect.width - 340);
         layoutEl.style.setProperty("--rr-explorer-w", next + "px");
+        measurePanes();
+    }
+
+    /** Keyboard resize for the horizontal grip — ↑/↓ (24px, Shift 64px). */
+    function nudgeExplorerHeight(delta: number): void {
+        if (!layoutEl) return;
+        const master = layoutEl.querySelector<HTMLElement>(".rr-master");
+        if (!master) return;
+        const rect = layoutEl.getBoundingClientRect();
+        const next = clamp(master.getBoundingClientRect().height + delta, 200, rect.height - 200);
+        layoutEl.style.setProperty("--rr-explorer-h", next + "px");
+        measurePanes();
     }
 
     function onDragKey(event: KeyboardEvent): void {
@@ -618,29 +683,73 @@
         nudgeExplorer(event.key === "ArrowLeft" ? -step : step);
     }
 
-    // * One effect: wires the vertical grip against the mounted container,
-    //   cleanup on unmount (svelte:window would target the wrong window — see App).
+    function onDragHeightKey(event: KeyboardEvent): void {
+        const step = event.shiftKey ? 64 : 24;
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        nudgeExplorerHeight(event.key === "ArrowUp" ? -step : step);
+    }
+
+    /** Double-click reset: drop only that axis' inline var (back to CSS default). */
+    function resetExplorerWidth(): void {
+        layoutEl?.style.removeProperty("--rr-explorer-w");
+        measurePanes();
+    }
+
+    function resetExplorerHeight(): void {
+        layoutEl?.style.removeProperty("--rr-explorer-h");
+        measurePanes();
+    }
+
+    // * One effect: wires BOTH grips against the mounted container, cleanup on
+    //   unmount (svelte:window would target the wrong window — see App).
     $effect(() => {
         if (!layoutEl) return;
         const unbinds: Array<() => void> = [];
         const dragV = layoutEl.querySelector<HTMLElement>(".rr-drag-v");
         if (dragV) {
             unbinds.push(
-                makeDrag(dragV, (e) => {
+                makeDrag(dragV, "col-resize", (e) => {
                     const rect = layoutEl!.getBoundingClientRect();
                     // * 420px floor: the left column hosts the inline editor.
                     layoutEl!.style.setProperty(
                         "--rr-explorer-w",
                         clamp(e.clientX - rect.left, 420, rect.width - 340) + "px",
                     );
+                    measurePanes();
                 }),
             );
         }
+        const dragH = layoutEl.querySelector<HTMLElement>(".rr-drag-h");
+        if (dragH) {
+            unbinds.push(
+                makeDrag(dragH, "row-resize", (e) => {
+                    const rect = layoutEl!.getBoundingClientRect();
+                    layoutEl!.style.setProperty(
+                        "--rr-explorer-h",
+                        clamp(e.clientY - rect.top, 200, rect.height - 200) + "px",
+                    );
+                    measurePanes();
+                }),
+            );
+        }
+        measurePanes();
         return () => unbinds.forEach((unbind) => unbind());
     });
 </script>
 
-<div class="rr-master-detail rr-tab-root" bind:this={layoutEl} role="presentation">
+<div class="rr-master-detail rr-tab-root" bind:this={layoutEl} data-pane={pane} role="presentation">
+    <!-- * Phone-only switch: one visible pane at a time (visibility, not unmount). -->
+    <div class="rr-pane-switch">
+        <ChoiceGroup
+            name="rr-rules-pane"
+            label={t("rules.pane.label")}
+            legendHidden
+            value={pane}
+            options={paneOptions}
+            onchange={(value) => (pane = value === "preview" ? "preview" : "rules")}
+        />
+    </div>
     <!-- ─── EXPLORER (top-left) ────────────────────────────────────────────── -->
     <div class="rr-master" bind:this={masterEl} role="presentation">
         <div class="rr-filter-sticky">
@@ -889,13 +998,34 @@
             </span>
         </div>
     </div>
-    <button
-        type="button"
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+    <div
         class="rr-drag-v"
+        role="separator"
+        tabindex="0"
+        aria-orientation="vertical"
         aria-label={t("a11y.dragExplorerWidth")}
         title={t("a11y.dragExplorerWidth")}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={explorerWidthPct}
         onkeydown={(e) => onDragKey(e)}
-    ></button>
+        ondblclick={resetExplorerWidth}
+    ></div>
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+    <div
+        class="rr-drag-h"
+        role="separator"
+        tabindex="0"
+        aria-orientation="horizontal"
+        aria-label={t("a11y.dragExplorerHeight")}
+        title={t("a11y.dragExplorerHeight")}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={explorerHeightPct}
+        onkeydown={(e) => onDragHeightKey(e)}
+        ondblclick={resetExplorerHeight}
+    ></div>
 
     <!-- ─── PREVIEW (top-right) — bound to the OPEN group (whole chain) ─────── -->
     <div class="rr-preview-zone">

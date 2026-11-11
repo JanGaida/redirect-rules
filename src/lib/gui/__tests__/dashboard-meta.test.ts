@@ -8,12 +8,14 @@ afterEach(() => {
     document.head.innerHTML = "";
 });
 
+const VIEWPORT = "width=device-width, initial-scale=1, viewport-fit=cover";
+
 describe("ensureViewportMeta", () => {
     it("adds a device-width viewport meta when missing", () => {
         ensureViewportMeta(document);
 
         expect(metas()).toHaveLength(1);
-        expect(metas()[0].getAttribute("content")).toBe("width=device-width, initial-scale=1");
+        expect(metas()[0].getAttribute("content")).toBe(VIEWPORT);
     });
 
     it("updates an existing stale meta instead of appending a second one", () => {
@@ -26,7 +28,7 @@ describe("ensureViewportMeta", () => {
 
         expect(metas()).toHaveLength(1);
         expect(metas()[0]).toBe(stale);
-        expect(stale.getAttribute("content")).toBe("width=device-width, initial-scale=1");
+        expect(stale.getAttribute("content")).toBe(VIEWPORT);
     });
 
     it("is idempotent across repeated boots", () => {
@@ -35,7 +37,7 @@ describe("ensureViewportMeta", () => {
         ensureViewportMeta(document);
 
         expect(metas()).toHaveLength(1);
-        expect(metas()[0].getAttribute("content")).toBe("width=device-width, initial-scale=1");
+        expect(metas()[0].getAttribute("content")).toBe(VIEWPORT);
     });
 
     it("does nothing when the document has no head", () => {

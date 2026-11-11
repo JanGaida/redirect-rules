@@ -1,9 +1,10 @@
 <script lang="ts">
     /**
      * App — dashboard root: fullscreen layout, header (brand, status segment,
-     * actions), vertical rail navigation (tabs, dev chips, theme/locale,
-     * drag lock, autosave, version), tab body, toast. Lives in the hash-takeover
-     * tab mounted by `dashboard.ts` (ADR 0011).
+     * actions), navigation (vertical rail on desktop, bottom bar on phones)
+     * with the tab list, dev chips + utilities + version (rail footer on
+     * desktop, header actions on phones), tab body, toast. Lives in the
+     * hash-takeover tab mounted by `dashboard.ts` (ADR 0011).
      *
      * * Window wiring targets the DASHBOARD window (`win` prop) — `svelte:window`
      *   would bind the OPENER (the app code runs in the opener's context).
@@ -82,6 +83,12 @@
     let localePillEl = $state<HTMLButtonElement | null>(null);
     let railTabsEl = $state<HTMLDivElement | null>(null);
 
+    // * Phone layout: the rail becomes a bottom bar and the utilities move into
+    //   the header. MUST match the `(max-width: 760px)` breakpoint in
+    //   dashboard.css — both sides are the single source of the switch.
+    let phoneLayout = $state(false);
+    let wasPhoneLayout = false;
+
     /** Current toast payload (null = hidden) — single-slot receipt/undo (ADR 0039). */
     const toast = $derived(uiState.toast);
 
@@ -107,6 +114,25 @@
     }
 
     let { win, initialTab, initialUrl, createRule, onClose }: Props = $props();
+
+    // * Phone breakpoint watcher (CSS counterpart lives in dashboard.css).
+    $effect(() => {
+        const query = win.matchMedia("(max-width: 760px)");
+        const update = (): void => {
+            phoneLayout = query.matches;
+        };
+        update();
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+    });
+
+    // * A layout flip moves the locale trigger — an open popover would stay
+    //   anchored to the old spot, so close it (rules-tab popovers are separate).
+    $effect(() => {
+        if (phoneLayout === wasPhoneLayout) return;
+        wasPhoneLayout = phoneLayout;
+        if (uiState.popover === "locale") uiState.popover = null;
+    });
 
     /** Refresh animation gate — keeps the spin to at least one full turn. */
     let refreshing = $state(false);
@@ -306,7 +332,7 @@
 
     /**
      * Roving-tabindex navigation for the rail tablist. Both axis pairs move
-     * (the rail is vertical but stacks horizontally on narrow viewports).
+     * (the rail is vertical on desktop and a bottom bar on phones).
      */
     function onTabKeydown(event: KeyboardEvent): void {
         const current = TABS.findIndex((tab) => tab.id === activeTab);
@@ -446,6 +472,65 @@
     });
 </script>
 
+<!-- * Utility cluster (theme, locale, skipped-step switch, autosave speed):
+       rendered ONCE — in the rail footer on desktop, in the header actions on
+       phones. Duplicating it would duplicate `id="rr-locale-menu"` and the
+       popover refs. -->
+{#snippet railTools()}
+    <button
+        class="rr-theme-toggle"
+        type="button"
+        onclick={cycleTheme}
+        title={t("theme.title")}
+        aria-label={t(`theme.${store.settings.theme}`)}
+    >
+        <Icon name={themeIcon} />
+    </button>
+    <button
+        class="rr-lang-toggle"
+        type="button"
+        bind:this={localePillEl}
+        aria-label={`${t("system.locale")}: ${localeLabel}`}
+        title={`${t("system.locale")}: ${localeLabel}`}
+        aria-expanded={uiState.popover === "locale"}
+        aria-controls="rr-locale-menu"
+        onclick={toggleLocaleMenu}
+    >
+        {localeLabel}
+    </button>
+    {#if uiState.popover === "locale"}
+        <div
+            class="rr-locale-menu"
+            id="rr-locale-menu"
+            role="group"
+            aria-label={t("system.locale")}
+            bind:this={localeMenuEl}
+        >
+            {#each LOCALE_OPTIONS as option (option.value)}
+                <button
+                    class="rr-locale-option"
+                    type="button"
+                    aria-pressed={store.settings.locale === option.value}
+                    onclick={() => selectLocale(option.value)}
+                >
+                    {option.label}
+                </button>
+            {/each}
+        </div>
+    {/if}
+    <button
+        class="rr-visibility-toggle"
+        type="button"
+        aria-pressed={store.settings.hideSkipped}
+        aria-label={t("rail.hideSkipped")}
+        title={t("rail.hideSkipped")}
+        onclick={toggleGlobalHideSkipped}
+    >
+        <Icon name={store.settings.hideSkipped ? "visibilityOff" : "visibility"} />
+    </button>
+    <AutosavePill />
+{/snippet}
+
 <div class="rr-dashboard">
     <header class="rr-header">
         <div class="rr-header-left">
@@ -460,6 +545,9 @@
             <StatusLine />
         </div>
         <div class="rr-header-actions">
+            {#if phoneLayout}
+                <div class="rr-rail-tools rr-rail-tools--header">{@render railTools()}</div>
+            {/if}
             <!-- * Refresh: reload site rules/settings from storage and re-evaluate previews. -->
             <button
                 class="rr-btn"
@@ -502,7 +590,7 @@
             <div
                 class="rr-rail-tabs"
                 role="tablist"
-                aria-orientation="vertical"
+                aria-orientation={phoneLayout ? "horizontal" : "vertical"}
                 aria-label={t("rail.caption")}
                 bind:this={railTabsEl}
             >
@@ -548,58 +636,9 @@
                     </div>
                 {/if}
                 <div class="rr-rail-tools">
-                    <button
-                        class="rr-theme-toggle"
-                        type="button"
-                        onclick={cycleTheme}
-                        title={t("theme.title")}
-                        aria-label={t(`theme.${store.settings.theme}`)}
-                    >
-                        <Icon name={themeIcon} />
-                    </button>
-                    <button
-                        class="rr-lang-toggle"
-                        type="button"
-                        bind:this={localePillEl}
-                        aria-label={`${t("system.locale")}: ${localeLabel}`}
-                        title={`${t("system.locale")}: ${localeLabel}`}
-                        aria-expanded={uiState.popover === "locale"}
-                        aria-controls="rr-locale-menu"
-                        onclick={toggleLocaleMenu}
-                    >
-                        {localeLabel}
-                    </button>
-                    {#if uiState.popover === "locale"}
-                        <div
-                            class="rr-locale-menu"
-                            id="rr-locale-menu"
-                            role="group"
-                            aria-label={t("system.locale")}
-                            bind:this={localeMenuEl}
-                        >
-                            {#each LOCALE_OPTIONS as option (option.value)}
-                                <button
-                                    class="rr-locale-option"
-                                    type="button"
-                                    aria-pressed={store.settings.locale === option.value}
-                                    onclick={() => selectLocale(option.value)}
-                                >
-                                    {option.label}
-                                </button>
-                            {/each}
-                        </div>
+                    {#if !phoneLayout}
+                        {@render railTools()}
                     {/if}
-                    <button
-                        class="rr-visibility-toggle"
-                        type="button"
-                        aria-pressed={store.settings.hideSkipped}
-                        aria-label={t("rail.hideSkipped")}
-                        title={t("rail.hideSkipped")}
-                        onclick={toggleGlobalHideSkipped}
-                    >
-                        <Icon name={store.settings.hideSkipped ? "visibilityOff" : "visibility"} />
-                    </button>
-                    <AutosavePill />
                 </div>
                 <span class="rr-rail-version" title={VERSION}>v{VERSION}</span>
             </div>

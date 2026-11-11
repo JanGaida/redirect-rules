@@ -1,7 +1,8 @@
 # Architecture: GUI
 
-> How the Svelte 5 dashboard is structured: hash-takeover hosting, the vertical
-> rail navigation with the header status segment, the restyled editor-column|preview
+> How the Svelte 5 dashboard is structured: hash-takeover hosting, the responsive
+> navigation (vertical rail on desktop, bottom bar on phones) with the header status
+> segment, the restyled editor-column|preview
 > layout with the inline rule editor, store binding, autosave flow, the rule
 > editor's preview, the A9/R9 parity affordances (theme tri-state, assistant-tab
 > hand-off, row-granular change count in the pending label, tokref, autogrow,
@@ -18,8 +19,8 @@ flowchart TB
     end
     subgraph Gui["src/lib/gui/"]
         Dash["dashboard.ts<br/>(openDashboard + startDashboardMode:<br/>stop + DOM-wipe + ATTR-wipe + inject)"]
-        App["App.svelte<br/>(chrome header + status segment + rail nav<br/>+ tab body + toast)"]
-        Rules["tabs/RulesTab.svelte<br/>(SINGLE-OPEN controlled explorer accordion + filter |<br/>group preview cell +<br/>INLINE rule editor folds + pointer/keyboard resizer)"]
+        App["App.svelte<br/>(chrome header + status segment +<br/>rail nav ↔ bottom bar + utilities<br/>+ tab body + toast)"]
+        Rules["tabs/RulesTab.svelte<br/>(SINGLE-OPEN controlled explorer accordion + filter |<br/>group preview cell +<br/>INLINE rule editor folds + pointer/keyboard resizers +<br/>phone pane switch)"]
         Assistant["tabs/AssistantTab.svelte<br/>(split workbench: prompt card +<br/>JSON import + auto target · reveal link)<br/>+ components/ProviderLinks.svelte"]
         System["tabs/SystemTab.svelte"]
         StatsTab["tabs/StatsTab.svelte<br/>(insight layout + performance banner)"]
@@ -79,7 +80,7 @@ flowchart TB
     Dash -->|"remote settings write (GM listener)"| AutoSave
     Dash -->|"inject CSS"| CSS
     App -->|"settings deep change → schedule()"| AutoSave
-    App -->|"rail footer"| Pill
+    App -->|"rail footer / header utilities"| Pill
     App -->|"header status"| Status
     Status -->|"autosave glyph"| Indicator
     Pill -->|"speed cycle"| AutoSpeed
@@ -152,57 +153,86 @@ flowchart TB
   target and import history, and the system-tab import-error
   flag. Transient view chrome (popover/toast) lives in `ui-state.svelte.ts` and is
   deliberately NOT persisted.
-- Layout (restyle port, design A9/R43 + R9; revised 02.11., ADR 0022/0023):
-  the dashboard is a vertical RAIL (left, 92px; 80px at ≤760px) with the tab
-  list and a rail footer (DEV/HMR chips, a 2×2 utility grid — theme + locale on
-  top, the global skipped-step switch + autosave pill below — and
-  the version),
-  next to the tab content. The RULES tab renders a TWO-ZONE grid — editor
-  column (left, DEFAULT 50% of the width: sites as `<details>` accordions — a
-  SINGLE-OPEN accordion where every group starts FOLDED, only ONE may be open
-  at a time, and unfolding binds the preview to that group; kind-chip + number
-  rule rows with the INLINE rule editor inside the unfolded row, plus the filter
-  input) and Preview cell (right, 50%, via `RuleEditor mode="preview"`). With no
-  group open, the preview cell shows an INERT mirror of the explorer filter row
-  (same 32px control height, divider, and spacing) above the empty state, so
-  both columns share the same top rhythm; the mirror contains no controls
-  (ADR 0018).
+- Layout (restyle port, design A9/R43 + R9; revised 02.11., ADR 0022/0023;
+  responsive navigation 11.11., [ADR 0045](../adr/0045-mobile-layout-bottom-nav-and-pane-switch.md)):
+  one breakpoint source of truth — `(max-width: 760px)` in CSS and `matchMedia` in
+  `App.svelte`.
+    - 1101px and wider: RAIL (left, 92px) with the tab list and a rail footer
+      (DEV/HMR chips, a 2×2 utility grid — theme + locale on top, the global
+      skipped-step switch + autosave pill below — and the version), next to the tab
+      content. The RULES tab renders a TWO-ZONE grid — editor column (left, DEFAULT
+      50% of the width) | vertical grip | Preview cell (right, 50%, via
+      `RuleEditor mode="preview"`).
+    - 761–1100px: the same rail; the split STACKS explorer above preview with a
+      HORIZONTAL grip between the panes. The preview cell gets its own panel
+      surface, a strong top border and rounded top corners so the two stacked panes
+      never blur into one scroll run; the ghost filter mirror is hidden (stacked it
+      reads as a duplicated search field).
+    - ≤760px: the rail becomes a BOTTOM BAR — 5 tabs, `--rr-bottom-tap` (44px,
+      48px on coarse pointers), `env(safe-area-inset-bottom)` padding, brand-soft
+      fill + top-edge marker for the active tab — and the utility cluster moves
+      into the header actions (one `{#snippet}` instance, so `id="rr-locale-menu"`
+      and the popover refs stay unique; the menu opens downward there). The header
+      density steps down: title ≤560px, status label ≤400px, app icon ≤340px, tab
+      labels ≤380px. The RULES tab drops the split for a segmented
+      "Rules | Preview" switch; both panes stay mounted in ONE grid cell and only
+      `visibility` flips, so scroll position, open group, selected rule and
+      inline-editor text survive. A chain-step click that arrives while the
+      explorer is hidden flips the switch back and focuses the rule summary.
+- Shared in every mode: the RULES explorer hosts sites as `<details>` accordions —
+  a SINGLE-OPEN accordion where every group starts FOLDED, only ONE may be open at
+  a time, and unfolding binds the preview to that group; kind-chip + number rule
+  rows with the INLINE rule editor inside the unfolded row, plus the filter input.
+  With no group open, the preview cell shows an INERT mirror of the explorer filter
+  row (same 32px control height, divider, and spacing) above the empty state, so
+  both columns share the same top rhythm; the mirror contains no controls and only
+  exists in the side-by-side split (ADR 0018).
   Since 27.10. (PADDING INVERSION, amended 02.11.) this needs NO negative-margin
   breakout: `.rr-dashboard` carries no horizontal padding; the header spans the
   window naturally, and the TAB PANEL carries the window inset (12px top, 20px
-  left/right, 0 bottom — the work area reaches the window edge). The two work
-  columns only keep their grip/bottom breathing room. Rules and the centered
-  tabs force classic 10px scrollbars (`::-webkit-scrollbar`; Firefox stays
-  thin/classic), so the overlay thumb can never expand over the cards. Rules
-  keeps 12px card-to-scrollbar clearance; the centered tabs reserve the same
-  12px `--rr-scroll-lane` at the panel edge. Each column is its own
-  vertical scroll container (`overflow-y: auto`, `overflow-x: hidden`); the grid
-  itself never scrolls. One drag grip resizes
-  `--rr-explorer-w` per session (pointer events, clamped 420px … width − 340px;
-  CSS var, NOT persisted — deferred). The splitter is a full-height
-  `--rr-grip-w` hit rail (14px, 28px on coarse pointers) with a centered
+  left/right, 0 bottom — the work area reaches the window edge; phones use
+  10px/12px). The two work columns only keep their grip/bottom breathing room.
+  Rules and the centered tabs force classic 10px scrollbars (`::-webkit-scrollbar`;
+  Firefox stays thin/classic), so the overlay thumb can never expand over the
+  cards. Rules keeps 12px card-to-scrollbar clearance (8px on phones); the centered
+  tabs reserve the same `--rr-scroll-lane` at the panel edge. Each column is its
+  own vertical scroll container (`overflow-y: auto`, `overflow-x: hidden`); the
+  grid itself never scrolls. Both grips resize a session CSS var (pointer events,
+  double-click reset, arrow keys — 24px, Shift 64px): `--rr-explorer-w` (clamped
+  420px … width − 340px) and `--rr-explorer-h` (clamped 200px … height − 200px; the
+  grid clamps it again against the container so a shrunken window keeps the
+  preview visible). Neither is persisted — deferred. Each grip is a focusable
+  `role="separator"` with a measured `aria-valuenow` and a full-width
+  `--rr-grip-w` hit rail (14px, 28px on coarse pointers) carrying a centered
   capsule: 3×40px `--rr-border-strong` at rest, 4×48px accent plus a blurred
   `--rr-accent-soft` halo on hover/focus, and 5×56px accent while dragging
-  (class-driven `.active`). Its width/height and halo opacity/scale use `--rr-motion-duration-fast` +
+  (class-driven `.active`); the horizontal grip swaps width/height. Its dimensions
+  and halo opacity/scale use `--rr-motion-duration-fast` +
   `--rr-motion-ease-standard`; reduced motion switches states instantly. The add
   actions (add icon + label) use the ghost-accent family (`--rr-btn--add`, accent
   text + accent hover — R45). The status line renders ONCE in the chrome header
-  between the brand and the actions — not a full-width bottom row, and the
-  RulesTab grid has no status row. The status line is `aria-live="polite"`, so phase
-  and shape changes are announced without moving focus. The header actions (refresh, undo, close) are
-  three 28px neutral rail-pill circles; only close turns danger on hover.
-  Refresh asks for confirmation when the store is dirty (a refresh discards
-  unsaved/paused work), then spins one turn via `.rr-btn--spinning`.
-- Touch contract (ADR 0032; scope tablet + touch notebook): the takeover boot
-  re-installs the `width=device-width, initial-scale=1` viewport meta
+  between the brand and the actions — not a full-width bottom row, and the RulesTab
+  grid has no status row. The status line is `aria-live="polite"`, so phase and
+  shape changes are announced without moving focus. The header actions (refresh,
+  undo, close) are three 28px neutral rail-pill circles; only close turns danger on
+  hover (pills stay 28px on phones — 32px would overflow 360px next to seven
+  buttons). Refresh asks for confirmation when the store is dirty (a refresh
+  discards unsaved/paused work), then spins one turn via `.rr-btn--spinning`. The
+  toast keeps `top: 68px + env(safe-area-inset-top)` so a notch never clips it.
+- Touch contract (ADR 0032; scope tablet + touch notebook; phones 11.11.): the
+  takeover boot re-installs the
+  `width=device-width, initial-scale=1, viewport-fit=cover` viewport meta
   (`dashboard-meta.ts`) after the DOM wipe, so tablets do not use the ~980px
-  fallback viewport. Touch and pen share the ADR 0031 pointer controller; grips
-  keep `touch-action: none` while the rest of the tappable chrome opts into
+  fallback viewport and iOS reports real `env(safe-area-inset-*)` values for the
+  bottom bar and the toast. Touch and pen share the ADR 0031 pointer controller;
+  grips keep `touch-action: none` while the rest of the tappable chrome opts into
   `manipulation` (no double-tap delay, pinch zoom stays). Both list drags expose
   `destroy()`, which aborts an in-flight gesture, releases capture, and drops
   listeners when the owning tab or editor unmounts. `--rr-tap-min` (24px,
   32px on `any-pointer: coarse`) floors the grip/row-action/affix hit boxes,
-  `--rr-grip-w` (14px, 28px coarse) widens the splitter rail, and
+  `--rr-grip-w` (14px, 28px coarse) sizes BOTH splitter rails (vertical width,
+  horizontal height), `--rr-bottom-tap` (44px, 48px coarse) floors the phone
+  bottom-bar tabs and the pane switch segments, and
   `--rr-field-fs` (0.95em, 16px coarse — the iOS focus-zoom threshold) is shared
   by fields, the highlight mirror and the leading affix; the site-gate and
   rule-editor fields use the scoped `--rr-editor-field-fs` (`--rr-fs-sm`, 16px
@@ -1154,8 +1184,6 @@ URL/chain divider.
 - Stats tab: `src/lib/gui/tabs/StatsTab.svelte` + `src/lib/gui/stats-view.ts` (ADR 0027); component doc: `docs/architecture/stats.md`
 - Settings schema/store: `docs/architecture/settings-storage.md`
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
-- Decisions: `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
+- Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — against `App.svelte`, `RulesTab.svelte`, `RuleEditor.svelte`,
-`preview.ts`, `GroupTestIndicator.svelte`, `dashboard.css`, transfer view,
-`motion.ts`, `chat-template.ts`.
+Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, dashboard.css, transfer view, motion.ts, chat-template.ts

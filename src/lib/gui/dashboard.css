@@ -125,6 +125,10 @@
     /* * Touch contract (ADR 0032): minimum hit box + splitter rail width;
        `@media (any-pointer: coarse)` raises both for finger input. */
     --rr-tap-min: 24px;
+    /* * Bottom-bar tab + phone pane-switch floor (WCAG 2.5.8 target size). */
+    --rr-bottom-tap: 44px;
+    /* * Grip rail thickness — vertical splitter width AND horizontal splitter
+       height (the media queries swap the axis, the token stays the rail size). */
     --rr-grip-w: 14px;
     /* * Clearance between the cards and the forced-classic 10px scrollbar in the
        centered tabs and both Rules columns. */
@@ -155,6 +159,9 @@
          50/50 default; the splitter rail (`--rr-grip-w`) is split between both
          panes (14px, 28px on coarse pointers). */
     --rr-explorer-w: calc(50% - var(--rr-grip-w) / 2);
+    /* * Explorer HEIGHT in the stacked split (761–1100px) — session-local like
+         the width var, driven by the horizontal grip. */
+    --rr-explorer-h: 48vh;
     /* * Preview tokens (URI tones defer to the diff). */
     --rr-u-scheme: #9ec1ff;
     --rr-u-scheme-bg: rgba(120, 170, 255, 0.14);
@@ -1272,54 +1279,159 @@ body {
     }
 }
 
+/* * ≤760px: the rail turns into a BOTTOM BAR (5 tabs, safe-area padded) and the
+   utilities move into the header actions — see the railTools snippet in App.
+   MUST match the `(max-width: 760px)` matchMedia in App.svelte. */
 @media (max-width: 760px) {
+    :root {
+        /* * Phone columns keep an 8px card-to-scrollbar clearance. */
+        --rr-scroll-lane: 8px;
+    }
+
     .rr-body {
-        grid-template-columns: 80px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "main"
+            "rail";
+    }
+
+    .rr-main {
+        grid-area: main;
     }
 
     .rr-rail {
-        padding: 8px 6px;
+        grid-area: rail;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 0;
+        padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+        border-right: 0;
+        border-top: 1px solid var(--rr-border-strong);
+        background: var(--rr-panel);
     }
 
-    .rr-rail-caption,
-    .rr-rail-version {
-        display: none;
+    .rr-rail-tabs {
+        flex: 1 1 auto;
+        flex-direction: row;
+        gap: 2px;
     }
 
     .rr-rail-tab {
-        font-size: 9px;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: var(--rr-bottom-tap);
+        padding: 4px 2px;
+        font-size: 9.5px;
+        background: transparent;
+        border-color: transparent;
         box-shadow: none;
     }
 
-    .rr-rail-tab:hover {
+    .rr-rail-tab:hover,
+    .rr-rail-tab:active,
+    .rr-rail-tab[aria-selected="true"]:hover {
         transform: none;
+        border-color: transparent;
+        box-shadow: none;
     }
 
     .rr-rail-tab .rr-rail-icon svg {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
+    }
+
+    /* * Active tab: soft brand fill replaces the rail hero gradient; the marker
+         moves to the TOP edge (the bar sits at the window bottom). */
+    .rr-rail-tab[aria-selected="true"] {
+        background: var(--rr-brand-soft);
+        border-color: transparent;
+        box-shadow: none;
     }
 
     .rr-rail-tab[aria-selected="true"]::before {
-        left: -6px;
+        left: 50%;
+        top: -1px;
+        bottom: auto;
+        width: 24px;
+        height: 2px;
+        transform: translateX(-50%);
+        border-radius: 0 0 2px 2px;
     }
 
-    .rr-rail-tools {
-        grid-template-columns: repeat(2, 26px);
+    /* * Safety net: the footer parts never render inside the bottom bar. */
+    .rr-rail-spacer,
+    .rr-rail-caption,
+    .rr-rail-version,
+    .rr-rail-foot {
+        display: none;
+    }
+
+    /* * Utilities in the header: one row, right-aligned, 4px gaps. */
+    .rr-rail-tools--header {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        justify-content: end;
         gap: 4px;
     }
 
-    .rr-theme-toggle,
-    .rr-visibility-toggle,
-    .rr-lang-toggle,
-    .rr-autosave-toggle {
-        width: 26px;
-        min-width: 26px;
-        height: 26px;
-        padding: 0;
+    /* * The locale menu opens DOWNWARD from the header trigger. */
+    .rr-rail-tools--header .rr-locale-menu {
+        top: calc(100% + 6px);
+        bottom: auto;
+        left: auto;
+        right: 0;
+    }
+
+    .rr-header {
+        padding: 0 12px;
+        padding-top: env(safe-area-inset-top);
+    }
+
+    .rr-header-actions {
+        gap: 4px;
+    }
+
+    .rr-tab-panel {
+        padding: 10px 12px 0;
+        /* * Bottom bar: the panels slide horizontally, not vertically. */
+        transform: translateX(calc((var(--rr-tab-order, 0) - var(--rr-active-tab-index, 0)) * 100%));
     }
 
     .rr-status-ready {
+        display: none;
+    }
+}
+
+/* * Header density ladder — graduated so 320px never overflows. Pills stay 28px
+   (32px would break seven buttons + brand + status at 360px). */
+@media (max-width: 560px) {
+    .rr-title {
+        display: none;
+    }
+}
+
+@media (max-width: 400px) {
+    .rr-header {
+        padding: 0 8px;
+        padding-top: env(safe-area-inset-top);
+    }
+
+    /* * Indicator stays; the paused reason also lives in the Rules-tab hint. */
+    .rr-status-label {
+        display: none;
+    }
+}
+
+@media (max-width: 380px) {
+    /* * Tabs keep their accessible name through aria-label on the button. */
+    .rr-rail-label {
+        display: none;
+    }
+}
+
+@media (max-width: 340px) {
+    .rr-app-icon {
         display: none;
     }
 }
@@ -1342,23 +1454,55 @@ body {
     scrollbar-gutter: auto;
 }
 
-/* * Narrow windows / split-screen: stack explorer above preview, drop the
-   drag grip (the two-column split no longer exists). */
+/* * Narrow windows / split-screen: single column. The 761–1100px band keeps a
+   stacked split with a horizontal grip; ≤760px replaces the split with a pane
+   switch, so the grid there is authored in the phone block below. */
 @media (max-width: 1100px) {
-    .rr-master-detail {
-        --rr-explorer-w: 100%;
-        grid-template-columns: minmax(0, 1fr);
-        /* * 48vh floor: the inline editor needs vertical room; the explorer
-             scrolls internally when a rule body is taller. */
-        grid-template-rows: minmax(280px, 48vh) minmax(0, 1fr);
-        grid-template-areas:
-            "explorer"
-            "preview";
-    }
-
     .rr-drag-v {
         display: none;
     }
+
+    /* * Stacked: the inert filter mirror would read as a duplicate search field
+         directly under the explorer filter, so it only exists side-by-side. */
+    .rr-preview-zone .rr-filter-sticky--placeholder {
+        display: none;
+    }
+
+    .rr-preview-empty {
+        padding-top: 10px;
+    }
+}
+
+/* * 761–1100px: explorer above preview, horizontal grip rail between them. The
+   track clamp (`min(--rr-explorer-h, 100% - 200px - grip)`) keeps both panes on
+   screen when the window shrinks — no resize listener needed. */
+@media (min-width: 761px) and (max-width: 1100px) {
+    .rr-master-detail {
+        --rr-explorer-w: 100%;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows:
+            minmax(200px, min(var(--rr-explorer-h), calc(100% - 200px - var(--rr-grip-w))))
+            var(--rr-grip-w)
+            minmax(0, 1fr);
+        grid-template-areas:
+            "explorer"
+            "dragh"
+            "preview";
+    }
+
+    /* * Zone separation: the preview gets its own surface + top edge so the two
+         stacked panes never blur into one scroll run. */
+    .rr-preview-zone {
+        background: var(--rr-panel);
+        border-top: 1px solid var(--rr-border-strong);
+        border-radius: var(--rr-radius) var(--rr-radius) 0 0;
+        padding: 10px var(--rr-scroll-lane) 10px 8px;
+    }
+}
+
+/* * Phone pane switch (≤760px only) — hidden base; the phone block lays it out. */
+.rr-pane-switch {
+    display: none;
 }
 
 .rr-master {
@@ -1383,6 +1527,7 @@ body {
      sits inside the card; the window inset (20px) lives on the tab panel. 10px
      bottom parity with the explorer column. */
 .rr-preview-zone {
+    grid-area: preview;
     display: flex;
     min-height: 0;
     min-width: 0;
@@ -1555,6 +1700,107 @@ body {
     .rr-drag-v::before,
     .rr-drag-v::after {
         transition: none;
+    }
+}
+
+/* * Horizontal splitter (stacked split only): the same capsule language rotated
+      90° — width/height swap, halo/colors/motion stay identical. */
+.rr-drag-h {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    display: none;
+    grid-area: dragh;
+    position: relative;
+    margin: 0 4px;
+    border-radius: var(--rr-radius-sm);
+    cursor: row-resize;
+    touch-action: none;
+}
+
+.rr-drag-h:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--rr-ring);
+}
+
+.rr-drag-h::before,
+.rr-drag-h::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+/* * Halo: mirrored 56x12 bloom, same compositor-friendly opacity/scale tween. */
+.rr-drag-h::before {
+    width: 56px;
+    height: 12px;
+    background: var(--rr-accent-soft);
+    filter: blur(2px);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.65);
+    transition:
+        opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+        transform var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+}
+
+/* * Capsule: mirrored 40x3 grip that grows with the pointer state. */
+.rr-drag-h::after {
+    width: 40px;
+    height: 3px;
+    background-color: var(--rr-border-strong);
+    opacity: 0.55;
+    transform: translate(-50%, -50%);
+    transition:
+        width var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+        height var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+        background-color var(--rr-motion-duration-fast) var(--rr-motion-ease-standard),
+        opacity var(--rr-motion-duration-fast) var(--rr-motion-ease-standard);
+}
+
+.rr-drag-h:hover::before,
+.rr-drag-h:focus-visible::before,
+.rr-drag-h.active::before {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.rr-drag-h.active::before {
+    transform: translate(-50%, -50%) scale(1.06);
+}
+
+.rr-drag-h:hover::after,
+.rr-drag-h:focus-visible::after {
+    width: 48px;
+    height: 4px;
+    background-color: var(--rr-accent);
+    opacity: 1;
+}
+
+.rr-drag-h.active::after {
+    width: 56px;
+    height: 5px;
+    background-color: var(--rr-accent);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rr-drag-h::before,
+    .rr-drag-h::after {
+        transition: none;
+    }
+}
+
+/* * Stacked split only: the horizontal grip replaces the hidden vertical one.
+   Declared AFTER the base `display: none` so the axis switch wins. */
+@media (min-width: 761px) and (max-width: 1100px) {
+    .rr-drag-h {
+        display: block;
     }
 }
 
@@ -4954,7 +5200,7 @@ body.rr-dragging .rr-drag-handle {
 .rr-toast {
     position: fixed;
     left: 50%;
-    top: 68px;
+    top: calc(68px + env(safe-area-inset-top));
     transform: translateX(-50%);
     z-index: 30;
     display: flex;
@@ -6844,6 +7090,65 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
     }
 }
 
+/* ─── MARK: Phone pane switch (≤760px) ─────────────────────────────────── */
+
+/* * One visible pane at a time: both panes stay mounted in the SAME grid cell
+   (`visibility`, never `display`) so scroll position, the open group, the
+   selected rule and the inline editor survive the switch. */
+@media (max-width: 760px) {
+    .rr-master-detail {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas:
+            "switch"
+            "pane";
+    }
+
+    .rr-pane-switch {
+        grid-area: switch;
+        display: block;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--rr-border);
+    }
+
+    .rr-pane-switch .rr-choice-surface {
+        min-height: var(--rr-bottom-tap);
+    }
+
+    .rr-master,
+    .rr-preview-zone {
+        grid-area: pane;
+    }
+
+    .rr-master-detail[data-pane="preview"] .rr-master,
+    .rr-master-detail[data-pane="rules"] .rr-preview-zone {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .rr-drag-v,
+    .rr-drag-h {
+        display: none;
+    }
+
+    .rr-preview-zone {
+        padding: 0 var(--rr-scroll-lane) 10px 0;
+    }
+}
+
+/* * Narrow phones: field labels sit ABOVE their control. `.rr-ed-row` is
+   `display: contents`, so the one-column grid alone stacks label + field. */
+@media (max-width: 560px) {
+    .rr-col-fields {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 6px;
+    }
+
+    .rr-row-label:not(:first-child) {
+        margin-top: 6px;
+    }
+}
+
 /* ─── MARK: Touch contract (ADR 0032) ──────────────────────────────────── */
 /* * Gesture delay: tappable chrome opts into `manipulation` (no 300 ms
    double-tap zoom wait). Grips keep `touch-action: none` so a drag never
@@ -6868,6 +7173,7 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
 @media (any-pointer: coarse) {
     :root {
         --rr-tap-min: 32px;
+        --rr-bottom-tap: 48px;
         --rr-grip-w: 28px;
         --rr-field-fs: 16px;
         --rr-editor-field-fs: 16px;
