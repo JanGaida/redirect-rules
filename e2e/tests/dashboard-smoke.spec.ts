@@ -12,6 +12,15 @@ const contentWidth = (locator: Locator): Promise<number> =>
         return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     });
 
+/** Waits out a popover's entry transition so geometry reads the settled box. */
+const settlePopover = (pop: Locator): Promise<void> =>
+    pop.evaluate(async (el) => {
+        // * Two frames: `showPopover()`'s @starting-style transition is not in
+        //   `getAnimations()` before the first style recalc.
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await Promise.all(el.getAnimations().map((animation) => animation.finished));
+    });
+
 /**
  * Dashboard smoke — the GM menu commands open the hash-takeover dashboard
  * (replaces the old panel-smoke specs; ADR 0011).
@@ -470,7 +479,11 @@ test("the tabs switch and the autosave round-trip persists the settings", async 
     await expect(release.locator(".rr-changelog-version")).toHaveText(/^v\d+\.\d+\.\d+$/);
     await release.locator(".rr-changelog-release-head").click();
     await expect(release).toHaveAttribute("open", "");
-    await expect(release.locator(".rr-changelog-group-title").first()).toContainText("Features");
+    // * The latest release's first section depends on the shipped commits —
+    //   assert a known type label instead of assuming a Features release.
+    await expect(release.locator(".rr-changelog-group-title").first()).toContainText(
+        /Features|Bug Fixes|Performance|Reverts|Documentation/,
+    );
 
     // * AUTOSAVE round-trip: add a site rule, make it NON-EMPTY
     //   (prune-on-save drops entirely-empty rows/groups — documented save
@@ -1205,6 +1218,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     await expect(tokenPop.locator(".rr-toklink")).toHaveCount(0);
 
     // * Viewport-relative placement at the preview column's left edge.
+    await settlePopover(tokenPop);
     const [popBox, previewBox] = await Promise.all([
         tokenPop.boundingBox(),
         dashboard.locator(".rr-preview-zone").boundingBox(),
@@ -1224,6 +1238,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     await dashboard.setViewportSize({ width: 1000, height: 800 });
     await tokenTrigger.click();
     await expect(tokenPop).toBeVisible();
+    await settlePopover(tokenPop);
     const [stackedPop, stackedTrigger] = await Promise.all([tokenPop.boundingBox(), tokenTrigger.boundingBox()]);
     expect(stackedPop).not.toBeNull();
     expect(stackedTrigger).not.toBeNull();
