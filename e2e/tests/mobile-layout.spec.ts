@@ -113,7 +113,7 @@ test("phone: the pane switch preserves editor state and scroll position", async 
     expect(await master.evaluate((el) => el.scrollTop)).toBe(scrollBefore);
 });
 
-test("phone: a chain-step click switches to the rules pane and focuses the row", async ({ page }) => {
+test("phone: a chain-step click stays in preview and reveals the rule on an explicit switch", async ({ page }) => {
     await injectUserscript(page, { settings: SETTINGS });
     await page.goto("/").catch(() => undefined);
     const dashboard = await openDashboardTab(page);
@@ -131,8 +131,52 @@ test("phone: a chain-step click switches to the rules pane and focuses the row",
     const step = dashboard.locator(".rr-preview-zone .rr-steps details.rr-step-group").filter({ hasText: "Replace" });
     await step.first().locator("> summary").click();
 
+    // * No jump: the tap stays in Preview; the selection only lands silently.
+    await expect(masterDetail).toHaveAttribute("data-pane", "preview");
+    await expect(step.first()).toHaveAttribute("open", "");
+
+    // * The explicit Rules tap reveals the selected rule.
+    await dashboard.locator(".rr-pane-switch .rr-choice-surface").filter({ hasText: "Rules" }).click();
     await expect(masterDetail).toHaveAttribute("data-pane", "rules");
-    await expect(dashboard.locator('.rr-master-rule[data-site="0"][data-rule="0"] > summary')).toBeFocused();
+    const rule = dashboard.locator('.rr-master-rule[data-site="0"][data-rule="0"]');
+    await expect(rule).toHaveAttribute("open", "");
+    await expect(rule.locator("> .rr-master-rule-summary")).toBeInViewport();
+
+    // * Phone field labels lead their control on the SAME row (left of it).
+    const regexLabel = rule.locator(".rr-row-label").filter({ hasText: "Regex" });
+    await expect(regexLabel).toHaveCSS("text-align", "left");
+    const [labelBox, fieldBox] = await Promise.all([
+        regexLabel.boundingBox(),
+        rule.getByRole("textbox", { name: "Regex" }).boundingBox(),
+    ]);
+    expect(labelBox).not.toBeNull();
+    expect(fieldBox).not.toBeNull();
+    expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(fieldBox!.x + 1);
+    expect(labelBox!.y).toBeLessThan(fieldBox!.y + fieldBox!.height);
+    expect(labelBox!.y + labelBox!.height).toBeGreaterThan(fieldBox!.y - 1);
+});
+
+test("phone: the pane switch sits directly above the bottom bar", async ({ page }) => {
+    await injectUserscript(page, { settings: SETTINGS });
+    await page.goto("/").catch(() => undefined);
+    const dashboard = await openDashboardTab(page);
+    await dashboard.setViewportSize(PHONE);
+
+    const paneSwitch = dashboard.locator(".rr-pane-switch");
+    const master = dashboard.locator(".rr-master-detail > .rr-master");
+    const rail = dashboard.locator(".rr-rail");
+    await expect(paneSwitch).toBeVisible();
+
+    const [switchBox, masterBox, railBox] = await Promise.all([
+        paneSwitch.boundingBox(),
+        master.boundingBox(),
+        rail.boundingBox(),
+    ]);
+    expect(switchBox).not.toBeNull();
+    expect(masterBox).not.toBeNull();
+    expect(railBox).not.toBeNull();
+    expect(switchBox!.y).toBeGreaterThanOrEqual(masterBox!.y + masterBox!.height - 1);
+    expect(switchBox!.y + switchBox!.height).toBeLessThanOrEqual(railBox!.y + 1);
 });
 
 test("stacked split: one horizontal grip resizes the explorer height", async ({ page }) => {

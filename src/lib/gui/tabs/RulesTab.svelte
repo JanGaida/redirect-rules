@@ -155,9 +155,12 @@
     //   only visibility flips — scroll position + editor state survive. The
     //   glyphs keep the two small segments identifiable on narrow phones.
     let pane = $state<"rules" | "preview">("rules");
+    // * A chain step tapped in Preview selects silently; the explicit Rules tap
+    //   consumes this flag and reveals the row once.
+    let revealOnSwitch = $state(false);
     const paneOptions: Array<{ value: string; label: string; icon: IconName }> = $derived([
         { value: "rules", label: t("tabs.rules"), icon: "developerGuide" },
-        { value: "preview", label: t("rules.pane.preview"), icon: "visibility" },
+        { value: "preview", label: t("rules.pane.preview"), icon: "preview" },
     ]);
 
     // * Inline description edit: the shared InlineCaption owns the
@@ -438,17 +441,24 @@
     }
 
     /**
-     * Selects a rule — selection IS the unfolded row. Used by rule-row
-     * toggles and preview chain steps; a chain-step click also scrolls the row
-     * into view. On phones the explorer pane may be hidden, so it flips back to
-     * "rules" and focuses the row; desktop never steals focus.
+     * Applies a rule selection without moving the view — selection IS the
+     * unfolded row. Shared by explorer toggles, chain steps and reveals.
      */
-    function selectRule(siteIndex: number, ruleIndex: number): void {
+    function applySelection(siteIndex: number, ruleIndex: number): void {
         const changed = !selection || selection.siteIndex !== siteIndex || selection.ruleIndex !== ruleIndex;
         if (changed) log.debug("rule selected", { siteIndex, ruleIndex });
         openSite = siteIndex;
         selection = { siteIndex, ruleIndex };
         if (changed) rememberSelection(selection);
+    }
+
+    /**
+     * Selects a rule AND reveals it (add rule, assistant reveal). On phones the
+     * explorer pane may be hidden, so it flips back to "rules" and focuses the
+     * row; desktop never steals focus.
+     */
+    function selectRule(siteIndex: number, ruleIndex: number): void {
+        applySelection(siteIndex, ruleIndex);
         // * Only the phone pane switch hides the explorer; the desktop layout
         //   keeps it visible, so this branch never fires there.
         const paneHidden = masterEl !== null && getComputedStyle(masterEl).visibility === "hidden";
@@ -462,6 +472,35 @@
                     ?.focus({ preventScroll: true });
             }
             scrollRuleIntoView(siteIndex, ruleIndex);
+        });
+    }
+
+    /**
+     * Chain-step click: on the phone the explorer is hidden behind the pane
+     * switch, so select silently and defer the reveal to the explicit Rules
+     * tap. The split layouts keep the immediate scroll-into-view.
+     */
+    function selectStep(siteIndex: number, ruleIndex: number): void {
+        const paneHidden = masterEl !== null && getComputedStyle(masterEl).visibility === "hidden";
+        if (!paneHidden) {
+            selectRule(siteIndex, ruleIndex);
+            return;
+        }
+        applySelection(siteIndex, ruleIndex);
+        revealOnSwitch = true;
+    }
+
+    /** Phone pane switch: an explicit Rules tap reveals the pending step. */
+    function onPaneChange(value: string): void {
+        const next = value === "preview" ? "preview" : "rules";
+        if (next === pane) return;
+        pane = next;
+        if (next !== "rules" || !revealOnSwitch) return;
+        revealOnSwitch = false;
+        const target = selection;
+        if (!target) return;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => scrollRuleIntoView(target.siteIndex, target.ruleIndex));
         });
     }
 
@@ -747,7 +786,7 @@
             legendHidden
             value={pane}
             options={paneOptions}
-            onchange={(value) => (pane = value === "preview" ? "preview" : "rules")}
+            onchange={onPaneChange}
         />
     </div>
     <!-- ─── EXPLORER (top-left) ────────────────────────────────────────────── -->
@@ -949,7 +988,7 @@
                                             <RuleEditor
                                                 siteIndex={si}
                                                 ruleIndex={ri}
-                                                onSelectStep={selectRule}
+                                                onSelectStep={selectStep}
                                                 mode="fields"
                                             />
                                         </div>
@@ -1035,7 +1074,7 @@
                 <RuleEditor
                     siteIndex={openSite}
                     ruleIndex={selection && selection.siteIndex === openSite ? selection.ruleIndex : -1}
-                    onSelectStep={selectRule}
+                    onSelectStep={selectStep}
                     mode="preview"
                 />
             {/key}

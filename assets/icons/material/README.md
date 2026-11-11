@@ -50,13 +50,14 @@ No brand names, no Google wordmarks — glyphs only.
 | `dashboard`               | System tab: Appearance card icon                                                          |
 | `database`                | Reserved for a future data-management card (currently unused)                             |
 | `delete`                  | Delete rule / site group (explorer rows)                                                  |
-| `developer_guide`         | Rules tab icon                                                                            |
+| `developer_guide`         | Rules pane-switch segment (phone)                                                         |
 | `drag_indicator`          | Row drag grip (explorer + preview reordering)                                             |
 | `edit`                    | Caption pencil (site/preview description editor)                                          |
 | `error`                   | Log level Error                                                                           |
 | `fast_forward`            | Motion Fast (settings option, hero badge)                                                 |
 | `find_replace`            | Rule kind `replace` segment option                                                        |
 | `flag`                    | Rule kind `checkpoint` segment option                                                     |
+| `gavel`                   | Rules tab icon (rail + phone bottom bar)                                                  |
 | `hourglass_top`           | Autosave speed — slow (pill, badge, settings option)                                      |
 | `info`                    | About tab rail icon + details card + RegexManual/TokenReference info icon; log level Info |
 | `keyboard_arrow_right`    | Explorer accordion chevron (CSS-rotated when open)                                        |
@@ -68,6 +69,7 @@ No brand names, no Google wordmarks — glyphs only.
 | `notifications_off`       | Log level Silent                                                                          |
 | `open_in_new`             | About tab: open build commit on GitHub                                                    |
 | `play_arrow`              | Motion Normal (settings option, hero badge); checkpoint mode `continue` segment option    |
+| `preview`                 | Preview pane-switch segment (phone)                                                       |
 | `query_stats`             | Stats tab icon                                                                            |
 | `settings`                | System tab: General card icon                                                             |
 | `settings_backup_restore` | Per-card Reset button                                                                     |
