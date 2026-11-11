@@ -265,9 +265,10 @@ flowchart TB
   selects the rule, unfolds it and scrolls it into view (no focus steal). New
   rules (add + assistant import link) open automatically. The row summary carries the
   chips, label and RowActions. All row chrome (actions and the caption pencil)
-  stays hidden at rest on hover-capable devices and fades in on row hover,
-  keyboard focus, or open/active state — an open site group counts as active
-  (`hover: none` keeps them visible; ADR 0031). Site rows carry the group on/off toggle in the
+  stays hidden at rest on hover-capable devices; hidden chrome collapses so the
+  label/caption owns the width, and it expands on row hover, keyboard focus, or
+  open/active state — an open site group counts as active (`hover: none` keeps them
+  visible and reserved; ADR 0031). Site rows carry the group on/off toggle in the
   same strip (ADR 0038): `toggle_on`/`toggle_off` with `aria-pressed`, hidden at
   rest on hover-capable devices like clone/delete. The off state is also visible
   at rest through a muted row (caption, chevron, grip), and the preview cell
@@ -299,9 +300,10 @@ flowchart TB
   description, Escape discards it, and an empty value removes the field
   (fallback again). A single click still toggles the group. A pencil at the
   caption's trailing edge (ADR 0031) is the touch route: one tap opens the same
-  overlay, and the glyph stays hidden until row hover, focus, or open state. The
-  group body no longer carries a description field. The Hack webfont is
-  declared in `dashboard.css` with `font-display: optional`, so a late font
+  overlay, and the glyph stays hidden until row hover, focus, or open state; the
+  title host collapses its 28/36px reserve at rest (URL-value pencils keep a fixed
+  reserve). The group body no longer carries a description field. The Hack webfont
+  is declared in `dashboard.css` with `font-display: optional`, so a late font
   arrival cannot reflow the row after the field opens. The gate
   FIELD integrates both affordances INSIDE its visual box (TextInput
   `leading`/`trailing` affix snippets — absolute overlays, the input reserves
@@ -324,11 +326,12 @@ flowchart TB
   the `rules.groupInvalidRegex` tooltip flags a group whose gate OR any rule
   regex fails to compile (`siteHasInvalidRegex`) while folded. The trailing
   action strip carries the 6px caption-field clearance (the edit overlay
-  overhangs 6px, keeping 8px field-to-strip) and reveals on hover, focus or open
-  group. The header row carries a hover background (`--rr-panel-2`) and a
+  overhangs 6px, keeping 8px field-to-strip); hidden it collapses so the caption
+  owns the width, and it re-expands on hover, focus or open group. The header row
+  carries a hover background (`--rr-panel-2`) and a
   `:focus-visible` accent ring; both are scoped to `.rr-master >` because preview
   test-case rows share `rr-master-site`/`rr-group-summary`. Preview rows get the
-  same band, ring and hover-revealed actions through `.rr-preview-zone
+  same band, ring and collapsing hover-revealed actions through `.rr-preview-zone
 details.rr-ed-preview` (ADR 0030) — the `details` element is required because
   `rr-ed-preview` also names the outer preview section. The amber
   `.rr-autosave-paused` frame now marks INCOMPLETE groups only (empty gate/row,

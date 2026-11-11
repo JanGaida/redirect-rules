@@ -1,6 +1,16 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { openDashboardTab } from "../helpers/dashboard";
 import { injectUserscript, openFixtureWithUserscript, SEEDED_SETTINGS } from "../helpers/userscript";
+
+/** Border-box width of a row-chrome element. */
+const boxWidth = (locator: Locator): Promise<number> => locator.evaluate((el) => el.getBoundingClientRect().width);
+
+/** Caption text width: border box minus the horizontal padding. */
+const contentWidth = (locator: Locator): Promise<number> =>
+    locator.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    });
 
 /**
  * Dashboard smoke — the GM menu commands open the hash-takeover dashboard
@@ -88,15 +98,19 @@ test("double-click edits the site description and persists it", async ({ page })
     const summaryBox = await summary.boundingBox();
     expect(summaryBox).not.toBeNull();
 
-    // * ADR 0036: row chrome reveals on hover, focus or open — never at rest.
+    // * ADR 0031: row chrome reveals on hover, focus or open — never at rest.
+    //   Hidden chrome collapses so the caption owns the width.
     //   Focus still sits on the body here, so `:focus-within` cannot mask it.
     await dashboard.mouse.move(0, 0);
     const siteActions = summary.locator(".rr-actions");
     const pencil = summary.getByRole("button", { name: "Edit description" });
     const hoverCapable = await dashboard.evaluate(() => window.matchMedia("(hover: hover)").matches);
+    let restCaptionContentWidth = 0;
     if (hoverCapable) {
         await expect.poll(() => siteActions.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
         await expect.poll(() => pencil.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
+        await expect.poll(() => boxWidth(siteActions)).toBeLessThanOrEqual(0.5);
+        restCaptionContentWidth = await contentWidth(caption);
     }
 
     // * ADR 0033: the body no longer duplicates the description; the caption
@@ -105,6 +119,10 @@ test("double-click edits the site description and persists it", async ({ page })
     await summary.hover();
     await expect.poll(() => siteActions.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
     await expect.poll(() => pencil.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    if (hoverCapable) {
+        await expect.poll(() => boxWidth(siteActions)).toBeGreaterThan(20);
+        await expect.poll(() => contentWidth(caption)).toBeLessThan(restCaptionContentWidth - 20);
+    }
     await pencil.click();
     const pencilInput = site.locator(".rr-summary-desc");
     await expect(pencilInput).toBeVisible();
@@ -336,7 +354,8 @@ test("preview test-case summaries edit URLs and the description inline and filte
 
     // * Row actions: hidden at rest on hover-capable devices, visible on hover.
     //   Fold first — an open row keeps them revealed — and move focus out so
-    //   `:focus-within` cannot mask the at-rest check.
+    //   `:focus-within` cannot mask the at-rest check. Hidden chrome collapses so
+    //   the caption track owns the width.
     await summary.click();
     expect(await row.evaluate((el) => (el as HTMLDetailsElement).open)).toBe(false);
     const filter = dashboard.locator(".rr-preview-zone input.rr-filter");
@@ -345,12 +364,19 @@ test("preview test-case summaries edit URLs and the description inline and filte
     const actions = summary.locator(".rr-actions");
     const opacityOf = () => actions.evaluate((el) => getComputedStyle(el).opacity);
     const hoverCapable = await dashboard.evaluate(() => window.matchMedia("(hover: hover)").matches);
+    let restCaptionContentWidth = 0;
     if (hoverCapable) {
         // * The reveal fades — poll instead of reading mid-transition.
         await expect.poll(opacityOf).toBe("0");
+        await expect.poll(() => boxWidth(actions)).toBeLessThanOrEqual(0.5);
+        restCaptionContentWidth = await contentWidth(caption);
     }
     await summary.hover();
     await expect.poll(opacityOf).toBe("1");
+    if (hoverCapable) {
+        await expect.poll(() => boxWidth(actions)).toBeGreaterThan(20);
+        await expect.poll(() => contentWidth(caption)).toBeLessThan(restCaptionContentWidth - 20);
+    }
 
     // * Filter parity: the description is searchable; a miss reports the hint.
     await filter.fill("Docs");

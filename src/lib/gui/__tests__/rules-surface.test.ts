@@ -64,3 +64,26 @@ describe("group test dot", () => {
         expect(rulesTab.match(/<GroupTestIndicator/g) ?? []).toHaveLength(1);
     });
 });
+
+describe("row chrome collapse", () => {
+    const block = (selector: string): string => ruleBodies(selector).join("\n");
+
+    it("collapses every row action strip at rest so the title owns the width", () => {
+        for (const selector of [
+            ".rr-master > details.rr-master-site > .rr-group-summary > .rr-actions",
+            ".rr-master-rule-summary > .rr-actions",
+            ".rr-preview-zone details.rr-ed-preview > .rr-group-summary > .rr-actions",
+        ]) {
+            expect(block(selector)).toMatch(/max-width:\s*0/);
+            expect(block(selector)).toMatch(/overflow:\s*clip/);
+        }
+    });
+
+    it("collapses the title-caption pencil reserve but keeps the URL-value reserve", () => {
+        const title = ".rr-summary-lead > .rr-summary-caption > .rr-summary-host";
+        expect(block(title)).toMatch(/padding-right:\s*0/);
+        expect(block(".rr-summary-caption .rr-summary-host")).toMatch(
+            /padding-right:\s*calc\(var\(--rr-tap-min\) \+ 4px\)/,
+        );
+    });
+});
