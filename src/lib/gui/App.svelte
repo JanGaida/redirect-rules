@@ -66,7 +66,7 @@
 
     /** Rail tab registry — icon glyph + label (icons are visual only). */
     const TABS: Array<{ id: DashboardTab; icon: IconName; label: () => string }> = [
-        { id: "rules", icon: "developerGuide", label: () => t("tabs.rules") },
+        { id: "rules", icon: "gavel", label: () => t("tabs.rules") },
         { id: "assistant", icon: "smartToy", label: () => t("tabs.assistant") },
         { id: "stats", icon: "queryStats", label: () => t("tabs.stats") },
         { id: "info", icon: "info", label: () => t("tabs.info") },

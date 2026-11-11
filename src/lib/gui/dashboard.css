@@ -7165,21 +7165,23 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
 
 /* * One visible pane at a time: both panes stay mounted in the SAME grid cell
    (`visibility`, never `display`) so scroll position, the open group, the
-   selected rule and the inline editor survive the switch. */
+   selected rule and the inline editor survive the switch. The switch is a
+   STATIC bottom row directly above the phone bottom bar, not part of either
+   scrolling pane. */
 @media (max-width: 760px) {
     .rr-master-detail {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
         grid-template-areas:
-            "switch"
-            "pane";
+            "pane"
+            "switch";
     }
 
     .rr-pane-switch {
         grid-area: switch;
         display: block;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--rr-border);
+        padding: 12px 0;
+        border-top: 1px solid var(--rr-border);
     }
 
     .rr-pane-switch .rr-choice-surface {
@@ -7207,16 +7209,13 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
     }
 }
 
-/* * Narrow phones: field labels sit ABOVE their control. `.rr-ed-row` is
-   `display: contents`, so the one-column grid alone stacks label + field. */
-@media (max-width: 560px) {
-    .rr-col-fields {
-        grid-template-columns: minmax(0, 1fr);
-        row-gap: 6px;
-    }
-
-    .rr-row-label:not(:first-child) {
-        margin-top: 6px;
+/* * Phones keep the label BESIDE its field (same row, fixed label column)
+   instead of right-aligning the label text against the field. The two-column
+   `.rr-col-fields` grid and the first-line padding stay untouched. */
+@media (max-width: 760px) {
+    .rr-master-rule-body .rr-ed-fields .rr-row-label,
+    .rr-master-rule-body .rr-ed-fields .rr-ed-row:has(.rr-textarea) > .rr-row-label {
+        text-align: left;
     }
 }
 

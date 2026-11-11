@@ -21,6 +21,7 @@ const MENU_LABEL = "Redirect Rules: Open Dashboard";
 const DASHBOARD_DEADLINE_MS = 20_000;
 const STATS_TOTAL = 1_843;
 const LAST_REDIRECT_TS = Date.UTC(2026, 10, 9, 18, 42);
+const PHONE = { width: 480, height: 960 };
 
 /** Real package version — the polyfill otherwise renders its 0.0.0 marker. */
 const PACKAGE_VERSION = (
@@ -112,6 +113,15 @@ async function capture(dashboard: Page, name: string): Promise<void> {
     });
 }
 
+/** Opens the YouTube group and selects the bare Shorts/embed `replace` rule. */
+async function openShortsReplaceRule(dashboard: Page): Promise<void> {
+    const site = dashboard.locator(".rr-master > details.rr-master-site").nth(1);
+    await site.locator("> .rr-group-summary").click();
+    const rule = site.locator(".rr-master-rule").nth(5);
+    await rule.locator("> .rr-master-rule-summary").click();
+    await expect(rule.locator(".rr-ed-fields")).toBeVisible();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: Captures
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,13 +131,8 @@ test("capture the rules tab", async ({ page }) => {
     await injectForScreenshots(page, { settings, stats: screenshotStats(settings) });
     const dashboard = await openDashboard(page);
 
-    // * YouTube group (richer chain: removeQuery + replace + checkpoint) with its
-    // * first rule open, so the editor dock shows fields, chain, and preview.
-    const site = dashboard.locator(".rr-master > details.rr-master-site").nth(1);
-    await site.locator("> .rr-group-summary").click();
-    const rule = site.locator(".rr-master-rule").first();
-    await rule.locator("> .rr-master-rule-summary").click();
-    await expect(rule.locator(".rr-ed-fields")).toBeVisible();
+    // * Real regex + substitution in the editor, with the matching chain step.
+    await openShortsReplaceRule(dashboard);
 
     // * Unfold the first test case so the chain steps are part of the shot.
     const previewRow = dashboard.locator(".rr-preview-zone details.rr-ed-preview").first();
@@ -137,13 +142,15 @@ test("capture the rules tab", async ({ page }) => {
     await capture(dashboard, "dashboard-rules");
 });
 
-test("capture the stats tab", async ({ page }) => {
+test("capture the phone rules tab", async ({ page }) => {
     const settings = screenshotSettings();
     await injectForScreenshots(page, { settings, stats: screenshotStats(settings) });
     const dashboard = await openDashboard(page);
+    await dashboard.setViewportSize(PHONE);
 
-    await dashboard.locator("#rr-tab-stats").click();
-    await expect(dashboard.locator(".rr-stats-hero-total")).toHaveText(new Intl.NumberFormat("en").format(STATS_TOTAL));
+    // * Same rule as the desktop shot: real regex + substitution, bottom bar and
+    // * pane switch visible beside it.
+    await openShortsReplaceRule(dashboard);
 
-    await capture(dashboard, "dashboard-stats");
+    await capture(dashboard, "dashboard-mobile");
 });
