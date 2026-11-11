@@ -33,7 +33,7 @@
      *   (close = danger text), status line — App renders it once in the header
      *   (component StatusLine).
      */
-    import { onDestroy, tick } from "svelte";
+    import { onDestroy, tick, untrack } from "svelte";
     import { t, LOCALE_OPTIONS, resolveLocale } from "./i18n.svelte";
     import appIconRaw from "../../../assets/icons/app/icon.svg?raw";
     import { store } from "../stores/settings.svelte";
@@ -381,10 +381,13 @@
     });
 
     // * Autosave (ADR 0024): every settings deep change re-arms the configured
-    // debounce. CLEAN states (boot, close flush, remote adoption) schedule
-    // nothing — a remote reload cannot ping-pong (store stays clean).
+    //   debounce. CLEAN states (boot, close flush, remote adoption) schedule
+    //   nothing — a remote reload cannot ping-pong (store stays clean).
+    // ! `schedule()` reads AND writes `autosave.*` — call it UNTRACKED, so the
+    //   effect only depends on the dirty comparison (a tracked call self-runs
+    //   forever and trips Svelte's effect depth guard).
     $effect(() => {
-        if (store.settingsJson !== store.savedSnapshot) schedule();
+        if (store.settingsJson !== store.savedSnapshot) untrack(schedule);
     });
 
     // * Preference debug trail — one effect instead of scattered handler logs.

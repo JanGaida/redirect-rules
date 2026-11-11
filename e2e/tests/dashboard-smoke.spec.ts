@@ -1802,3 +1802,38 @@ test("ESC closes the transfer dialog without closing the dashboard", async ({ pa
     await expect(dashboard.locator(".rr-tab-panel--active")).toContainText("General");
     await expect(dashboard.locator(".rr-toast")).toHaveCount(0);
 });
+
+test("an edit re-arms autosave without tripping the effect depth guard", async ({ page }) => {
+    await openFixtureWithUserscript(page, "/");
+    const dashboard = await openDashboardTab(page);
+
+    // * Regression: the App autosave effect must call schedule() UNTRACKED.
+    //   A tracked call subscribes to `autosave.pendingSeq` while incrementing it,
+    //   so the effect re-runs itself until Svelte aborts a flush with
+    //   effect_update_depth_exceeded (console error in DEV builds, page error in
+    //   the prod bundle). Both are collected here.
+    const failures: string[] = [];
+    dashboard.on("pageerror", (error) => {
+        failures.push(error.message);
+    });
+    dashboard.on("console", (message) => {
+        if (message.type() === "error" && message.text().includes("effect_update_depth_exceeded")) {
+            failures.push(message.text());
+        }
+    });
+
+    const seeded = dashboard.locator(".rr-master-site").first();
+    await seeded.locator(".rr-group-summary").click();
+    await seeded.getByRole("textbox", { name: "Site", exact: true }).fill("/localhost-loop/");
+
+    // * The change ARMS the debounce (the effect ran with a dirty store) …
+    await expect(dashboard.locator(".rr-status-pending")).toContainText("saving 1 change");
+
+    // * … and the debounce still commits cleanly afterwards.
+    await expect
+        .poll(async () => (await page.evaluate(() => localStorage.getItem("rrGM_settings"))) ?? "", { timeout: 8000 })
+        .toContain("localhost-loop");
+    await expect(dashboard.locator(".rr-status")).toContainText("saved at");
+
+    expect(failures).toEqual([]);
+});

@@ -8,6 +8,7 @@
 //   a rejected GM write also pauses (`write`) and retries on the next change/flush.
 // * Session snapshot: the persisted state at boot powers undo; no stack, no cross-session persistence.
 // * Multi-dashboard: remote writes adopt while clean; a dirty tab shows a conflict hint (last-write-wins).
+// ! `schedule()` is imperative (writes `autosave.*`): tracked callers MUST `untrack()` it.
 
 import { store } from "../stores/settings.svelte";
 import { loadSettingsResult } from "../core/settings";
@@ -50,6 +51,13 @@ let snapshot: string | null = store.initialReadOk ? store.savedSnapshot : null;
 
 /** Debounce timer handle (module scope — one autosave per dashboard context). */
 let timer: number | null = null;
+
+/**
+ * * Arm counter behind `autosave.pendingSeq` (plain variable on purpose):
+ *   `autosave.pendingSeq += 1` would READ the reactive field it writes, so a
+ *   caller inside a tracked scope would subscribe and re-run forever.
+ */
+let pendingSeqCounter = 0;
 
 /**
  * The save gate: why persisting must NOT happen right now (null = clear).
@@ -112,12 +120,16 @@ function clearTimer(): void {
  * become valid with the next keystroke; the next change re-arms anyway).
  */
 export function schedule(): void {
+    // * Read the arm flag from the module-local timer, NOT `autosave.phase`:
+    //   this function writes that field, and a tracked caller must not learn
+    //   its own writes as dependencies.
+    const wasPending = timer !== null;
     clearTimer();
-    const wasPending = autosave.phase === "pending";
     const delay = store.settings.autosaveDelayMs ?? AUTOSAVE_DELAY_MS;
     autosave.phase = "pending";
     autosave.pausedReason = null;
-    autosave.pendingSeq += 1;
+    pendingSeqCounter += 1;
+    autosave.pendingSeq = pendingSeqCounter;
     autosave.pendingDelayMs = delay;
     if (!wasPending) log.debug("autosave armed", { delay });
     timer = window.setTimeout(() => {
