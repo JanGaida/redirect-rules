@@ -175,10 +175,12 @@ flowchart TB
       and the popover refs stay unique; the menu opens downward there). The header
       density steps down: title ≤560px, status label ≤400px, app icon ≤340px, tab
       labels ≤380px. The RULES tab drops the split for a segmented
-      "Rules | Preview" switch; both panes stay mounted in ONE grid cell and only
-      `visibility` flips, so scroll position, open group, selected rule and
-      inline-editor text survive. A chain-step click that arrives while the
-      explorer is hidden flips the switch back and focuses the rule summary.
+      "Rules | Preview" switch in a STATIC bottom row directly above the bottom
+      bar; both panes stay mounted in ONE grid cell and only `visibility` flips,
+      so scroll position, open group, selected rule and inline-editor text
+      survive. A chain-step click that arrives while the explorer is hidden
+      selects the rule silently; only an explicit Rules tap scrolls the selected
+      summary into view once.
 - Shared in every mode: the RULES explorer hosts sites as `<details>` accordions —
   a SINGLE-OPEN accordion where every group starts FOLDED, only ONE may be open at
   a time, and unfolding binds the preview to that group; kind-chip + number rule
@@ -264,8 +266,10 @@ flowchart TB
   computes the preview chain). Selection == open: exactly one rule is unfolded
   at a time (single-open across groups), unfolding selects it, closing clears
   the selection; opening a GROUP does not select a rule. A chain-step click
-  selects the rule, unfolds it and scrolls it into view (no focus steal). New
-  rules (add + assistant import link) open automatically. The row summary carries the
+  selects the rule, unfolds it and scrolls it into view (no focus steal); on the
+  phone pane switch it selects silently and the explicit Rules tap scrolls it
+  into view once. New rules (add + assistant import link) open automatically.
+  The row summary carries the
   chips, label and RowActions. All row chrome (actions and the caption pencil)
   stays hidden at rest on hover-capable devices; hidden chrome collapses so the
   label/caption owns the width, and it expands on row hover, keyboard focus, or
@@ -353,7 +357,8 @@ details.rr-ed-preview` (ADR 0030) — the `details` element is required because
   their verdict.
 - Inline editor fields (R8/R9/R11/R12; reworked 02.11., ADR 0022): ONE column —
   inline field ROWS (`.rr-ed-row`, fixed label column) for kind, regex and
-  substitution/params (label LEFT of the field, no stacking). Both reference
+  substitution/params (label LEFT of the field, no stacking; phones keep the
+  same row with left-leading label text). Both reference
   popovers share `InfoPopover.svelte`: the trigger sits in the field trailing
   affix and the popover is a native non-modal `popover="auto"` dialog in the TOP
   LAYER, so the tab panel's `contain`/`transform` and the explorer scroll cannot
@@ -1197,4 +1202,4 @@ URL/chain divider.
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
 - Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, InlineCaption.svelte, caption-edit-gesture.ts, dashboard.css, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, transfer view, motion.ts, chat-template.ts
+Verified: 2026-11-11 — App.svelte, RulesTab.svelte, RuleEditor.svelte, icon.ts, dashboard.css, InlineCaption.svelte, caption-edit-gesture.ts, dashboard-meta.ts, GroupTestIndicator.svelte, preview.ts, transfer view, motion.ts

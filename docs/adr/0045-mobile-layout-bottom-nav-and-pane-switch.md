@@ -1,6 +1,8 @@
 # ADR 0045: Mobile layout — bottom navigation and phone pane switch
 
-- Status: accepted (2026-11-11)
+- Status: accepted (2026-11-11; amended 2026-11-11 — preview chain-step selects
+  silently; reveal only on the explicit Rules switch; pane switch moved above the
+  bottom bar)
 - Deciders: project owner
 - Applies to: `src/lib/gui/App.svelte`, `src/lib/gui/tabs/RulesTab.svelte`,
   `src/lib/gui/dashboard.css`, `src/lib/gui/dashboard-meta.ts`,
@@ -54,11 +56,13 @@ status label ≤400px, app icon ≤340px) so seven 28px buttons plus the brand f
 320px.
 
 **Pane switch instead of a split.** At ≤760px the Rules tab renders a segmented
-"Rules | Preview" control. Both panes stay mounted in the same grid cell; the
-inactive pane is `visibility: hidden; pointer-events: none`. Nothing unmounts,
-so scroll position, open group, selected rule and inline-editor text survive the
-switch. `selectRule` flips back to "Rules" only when the explorer currently
-computes as hidden, and then focuses and scrolls the rule summary — the desktop
+"Rules | Preview" control in a static bottom grid row, directly above the phone
+bottom bar. Both panes stay mounted in the same `pane` cell; the inactive pane is
+`visibility: hidden; pointer-events: none`. Nothing unmounts, so scroll position,
+open group, selected rule and inline-editor text survive the switch. A
+chain-step tap in Preview selects the rule silently and defers the reveal: only
+an explicit "Rules" tap flips the pane and scrolls the selected summary into view
+once. Add-rule and assistant-reveal keep the immediate flip + focus. The desktop
 "no focus steal" behaviour is untouched.
 
 **Horizontal grip.** The stacked split gets a real grip rail between the panes.
