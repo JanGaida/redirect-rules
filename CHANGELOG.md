@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.1](https://github.com/JanGaida/redirect-rules/compare/v1.1.0...v1.1.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **gui:** correct changelog version pills and stats banner inset ([#13](https://github.com/JanGaida/redirect-rules/issues/13)) ([570b5cc](https://github.com/JanGaida/redirect-rules/commit/570b5cc830be7bd039ce8ff8935890f08b632c30))
+* **gui:** download backup exports through GM_download ([#11](https://github.com/JanGaida/redirect-rules/issues/11)) ([7c4dd91](https://github.com/JanGaida/redirect-rules/commit/7c4dd918505d8233105e43cd35626a8dd2914bf8))
+* **gui:** untrack the autosave scheduler effect ([#14](https://github.com/JanGaida/redirect-rules/issues/14)) ([fdd3435](https://github.com/JanGaida/redirect-rules/commit/fdd343597a8185361d7c9bc4530a963cb293c2a1))
+
 ## [1.1.0](https://github.com/JanGaida/redirect-rules/compare/v1.0.0...v1.1.0) (2026-11-11)
 
 
