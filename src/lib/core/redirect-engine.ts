@@ -14,10 +14,12 @@ import {
     type ReplaceRule,
     type RemoveQueryRule,
     type SiteRule,
+    type UnwrapRule,
     type UrlRule,
 } from "./settings";
 import { parseRegex, stripGlobalFlag, stripStickyFlag } from "./parse-regex";
 import { appendQueryParams, removeQueryParams } from "./append-query";
+import { unwrapTarget } from "./unwrap-url";
 import { querySurface } from "./decode-surface";
 import { createLogger, isDebugEnabled } from "./log";
 
@@ -63,7 +65,17 @@ interface CompiledCheckpoint {
     checkpointRe: RegExp;
 }
 
-export type CompiledRule = CompiledReplace | CompiledAppendQuery | CompiledRemoveQuery | CompiledCheckpoint;
+/** A compiled `unwrap` rule — `unwrapRe` is global-stripped (stateless `.exec()`). */
+interface CompiledUnwrap {
+    kind: "unwrap";
+    source: UnwrapRule;
+    /** Authored index within the owning site group. */
+    ruleIndex: number;
+    unwrapRe: RegExp;
+}
+
+export type CompiledRule =
+    CompiledReplace | CompiledAppendQuery | CompiledRemoveQuery | CompiledCheckpoint | CompiledUnwrap;
 
 /** A compiled site rule — `gateRe` is global-stripped (stateless `.test()`). */
 export interface CompiledSiteRule {
@@ -192,6 +204,21 @@ export function compileRules(siteRules: SiteRule[], options: { includeDisabled?:
                         gateRe: gateRe3,
                         keys: rule.keys,
                     });
+                } else if (rule.kind === "unwrap") {
+                    if (rule.regex === "") {
+                        dropped += 1;
+                        log.error("skipping unwrap rule — empty regex", {
+                            siteRegex: siteRule.siteRegex,
+                            rule,
+                        });
+                        continue;
+                    }
+                    rules.push({
+                        kind: "unwrap",
+                        source: rule,
+                        ruleIndex,
+                        unwrapRe: stripGlobalFlag(parseRegex(rule.regex)),
+                    });
                 } else {
                     if (rule.regex === "") {
                         dropped += 1;
@@ -317,6 +344,20 @@ export function executeCompiledGroup(
                 newUrl: next,
                 changed: next !== current,
                 reason: next !== current ? "applied" : "unchanged",
+            });
+            current = next;
+            continue;
+        }
+        if (rule.kind === "unwrap") {
+            const outcome = unwrapTarget(current, rule.unwrapRe);
+            const next = outcome.target ?? current;
+            steps.push({
+                rule,
+                ruleIndex: rule.ruleIndex,
+                oldUrl: current,
+                newUrl: next,
+                changed: next !== current,
+                reason: !outcome.matched ? "no-match" : next !== current ? "applied" : "unchanged",
             });
             current = next;
             continue;

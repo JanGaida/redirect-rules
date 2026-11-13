@@ -87,7 +87,7 @@ export interface StatsView {
 }
 
 /** Fixed donut/legend order — never derived from counts. */
-const KIND_ORDER = ["replace", "appendQuery", "removeQuery", "checkpoint"] as const;
+const KIND_ORDER = ["replace", "appendQuery", "removeQuery", "checkpoint", "unwrap"] as const;
 
 function percentage(count: number, total: number): number {
     return total > 0 ? (count / total) * 100 : 0;
@@ -102,6 +102,7 @@ export function ruleSummary(rule: UrlRule): string {
     if (rule.kind === "replace") return `${readableRegex(rule.regex) || "—"} → ${rule.substitution || "—"}`;
     if (rule.kind === "appendQuery") return rule.params || "—";
     if (rule.kind === "removeQuery") return rule.keys || "—";
+    if (rule.kind === "unwrap") return readableRegex(rule.regex) || "—";
     return readableRegex(rule.regex) || "—";
 }
 
@@ -110,6 +111,7 @@ export function ruleRawSummary(rule: UrlRule): string {
     if (rule.kind === "replace") return `${rule.regex || "—"} → ${rule.substitution || "—"}`;
     if (rule.kind === "appendQuery") return `${rule.params || "—"}${rule.regex ? ` (${rule.regex})` : ""}`;
     if (rule.kind === "removeQuery") return `${rule.keys || "—"}${rule.regex ? ` (${rule.regex})` : ""}`;
+    if (rule.kind === "unwrap") return rule.regex || "—";
     return `${rule.regex || "—"} (${rule.mode})`;
 }
 

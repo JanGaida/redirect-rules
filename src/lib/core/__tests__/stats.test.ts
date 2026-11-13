@@ -52,6 +52,13 @@ describe("ruleHash", () => {
         expect(one).not.toBe(gated);
         expect(ruleHash("/site/", { kind: "removeQuery", regex: "", keys: "utm_*" })).toBe(one);
     });
+
+    it("has a distinct unwrap tuple keyed by its regex", () => {
+        const one = ruleHash("/site/", { kind: "unwrap", regex: "/u=([^&]+)/" });
+        const two = ruleHash("/site/", { kind: "unwrap", regex: "/v=([^&]+)/" });
+        expect(one).not.toBe(two);
+        expect(one).not.toBe(ruleHash("/site/", { kind: "checkpoint", regex: "/u=([^&]+)/", mode: "stop" }));
+    });
 });
 
 describe("normalizeStats", () => {

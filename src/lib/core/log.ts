@@ -48,6 +48,7 @@ export type LogScope =
     | "system"
     | "transfer"
     | "ui"
+    | "unwrap"
     | "watcher";
 
 /**

@@ -9,6 +9,7 @@ each rule sees the output of the previous one.
 | `appendQuery` | `params`, optional `regex` | Appends `k=v&k2=v2`, fragment-safe; existing keys are overwritten in place. An optional `regex` gate is tested against the decoded query. |
 | `removeQuery` | `keys`, optional `regex` | Removes query params; a trailing `*` is a prefix wildcard, all matches (duplicates included) are removed. An optional `regex` gate is tested against the decoded query. |
 | `checkpoint` | `regex`, `mode` | Never changes the URL. `mode: "continue"` allows the remaining rules only on a match, `mode: "stop"` aborts them on a match. `regex` tests the current URL. |
+| `unwrap` | `regex` | Matches a redirect wrapper and replaces the whole URL with the percent-decoded target. Capture group 1 (or the whole match) is decoded with `decodeURIComponent`; only `http`/`https` targets are used. One pass, no re-encoding. |
 
 ## Test cases (required)
 

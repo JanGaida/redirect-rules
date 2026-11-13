@@ -22,7 +22,7 @@ A Tampermonkey userscript that rewrites URLs through regex rules at `document-st
 
 - **Site groups** — a `siteRegex` gate selects the URLs a group applies to.
 - **Ordered rule chains** — each group runs its rules in order.
-- **Four rule kinds** — `replace`, `appendQuery`, `removeQuery`, and `checkpoint`.
+- **Five rule kinds** — `replace`, `appendQuery`, `removeQuery`, `checkpoint`, and `unwrap`.
 - **Live validation** — invalid regexes are flagged and never saved.
 - **Phone layout** — the dashboard adapts down to 320px.
 - **Assistant** — copy an LLM prompt for a group, then import its JSON answer. No API key.
@@ -53,8 +53,9 @@ A Tampermonkey userscript that rewrites URLs through regex rules at `document-st
 | `appendQuery` | Merges params (`k=v&k2=v2`); keeps the fragment and raw encoding.                             |
 | `removeQuery` | Removes keys (`utm_*&fbclid`); a trailing `*` is a prefix wildcard.                           |
 | `checkpoint`  | Tests without changing the URL; `continue` needs a match, `stop` skips the rest of the chain. |
+| `unwrap`      | Decodes a captured wrapper target once; only absolute `http(s)` targets are used.             |
 
-The gate runs once per URL; rules run in order. `" "`/`\s` matches both raw and `%20`; query matching is decoded, edits keep raw encoding.
+The gate runs once per URL; rules run in order. `" "`/`\s` matches both raw and `%20`; query matching is decoded, query edits keep raw encoding, and `unwrap` is the one explicit target decode.
 
 ## 📌 Examples
 
@@ -67,13 +68,28 @@ Regex:        /^(https?:\/\/)([a-z-]+)\.m\.wikipedia\.org\//
 Substitution: $1$2.wikipedia.org/
 ```
 
-**Google Search — 100 results with the Web filter**
+**Google Search — 100 results, Web filter as fallback**
 
 ```text
-Site gate: /^https?:\/\/(?:www\.)?google\.[a-z]{2,3}(?:\.[a-z]{2,3})?\/search\?/
-Kind:      appendQuery
-Params:    num=100&udm=14
+Site gate:  /^https?:\/\/(?:www\.)?google\.[a-z]{2,3}(?:\.[a-z]{2,3})?\/search\?/
+Rules:      appendQuery  num=100
+            checkpoint   /[?&](?:udm|tbm)=/   →  stop
+            appendQuery  udm=14
 ```
+
+An explicitly set filter — `udm=` (Images, Videos, News, …) or the legacy `tbm=`
+(e.g. `tbm=isch`) — is kept; Web (`udm=14`) is only the fallback.
+
+**DuckDuckGo — unwrap result redirects**
+
+```text
+Site gate: /^https?:\/\/(?:www\.)?duckduckgo\.com\/l\/\?/
+Kind:      unwrap
+Regex:     /[?&]uddg=([^&]+)/
+```
+
+Capture group 1 (or the whole match) is percent-decoded once and replaces the wrapper.
+`javascript:`, `data:` and other non-http(s) targets are rejected.
 
 **Tracking — strip ad and share IDs on any host**
 

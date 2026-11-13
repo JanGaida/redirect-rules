@@ -9,6 +9,7 @@ Reihenfolge des `rules`-Arrays; jede Regel sieht die Ausgabe der vorherigen.
 | `appendQuery` | `params`, optional `regex` | Hängt `k=v&k2=v2` fragment-sicher an; vorhandene Keys werden an Ort und Stelle überschrieben. Optionales `regex`-Gate wird gegen die dekodierte Query getestet. |
 | `removeQuery` | `keys`, optional `regex` | Entfernt Query-Parameter; `*` am Ende ist ein Präfix-Wildcard, alle Treffer inklusive Duplikate werden entfernt. Optionales `regex`-Gate gegen die dekodierte Query. |
 | `checkpoint` | `regex`, `mode` | Ändert die URL nie. `mode: "continue"` lässt die restlichen Regeln nur bei Treffer zu, `mode: "stop"` bricht sie bei Treffer ab. `regex` prüft die aktuelle URL. |
+| `unwrap` | `regex` | Matcht einen Redirect-Wrapper und ersetzt die ganze URL durch das prozent-dekodierte Ziel. Capture-Gruppe 1 (oder der ganze Treffer) wird mit `decodeURIComponent` dekodiert; nur `http`/`https`-Ziele werden verwendet. Ein Durchlauf, kein Re-Encoding. |
 
 ## Testfälle (Pflicht)
 

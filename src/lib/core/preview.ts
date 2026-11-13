@@ -372,7 +372,7 @@ export type StepStatus = "applied" | "skipped";
 export interface GroupStepPreview {
     /** The step rule's index WITHIN its group (parity with the explorer chips). */
     ruleIndex: number;
-    kind: "replace" | "appendQuery" | "removeQuery" | "checkpoint";
+    kind: "replace" | "appendQuery" | "removeQuery" | "checkpoint" | "unwrap";
     /** The rule's identifying label — the step summary's "name". */
     label: string;
     /** The chain chip: the rule changed the url, or it was skipped (any reason). */
@@ -458,7 +458,7 @@ export function previewGroupCompiled(url: string, site: SiteRule, group: Compile
         } else if (outcome.rule.kind === "replace") {
             result = previewReplace(outcome.oldUrl, outcome.rule, outcome);
         } else {
-            result = previewAppendQuery(outcome.oldUrl, outcome);
+            result = previewGenericStep(outcome.oldUrl, outcome);
         }
 
         steps.push({
@@ -617,8 +617,8 @@ function previewReplace(
     };
 }
 
-/** appendQuery-rule preview: shared outcome + prefix/suffix diff coloring. */
-function previewAppendQuery(current: string, outcome: RuleStepOutcome): PreviewResult {
+/** Generic step preview (appendQuery/removeQuery/unwrap): shared outcome + prefix/suffix diff coloring. */
+function previewGenericStep(current: string, outcome: RuleStepOutcome): PreviewResult {
     if (!outcome.changed) return plainResult(current, outcome.reason);
     const after = outcome.newUrl;
 

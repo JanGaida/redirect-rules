@@ -35,6 +35,7 @@ flowchart TB
         Watcher["watcher.ts"]
         Storage["storage.ts"]
         Append["append-query.ts"]
+        Unwrap["unwrap-url.ts"]
         Parse["parse-regex.ts"]
         Preview["preview.ts"]
         Stats["stats.ts"]
@@ -56,6 +57,7 @@ flowchart TB
     Main -->|"compileRules"| Engine
     Engine -->|"parseRegex"| Parse
     Engine -->|"appendQueryParams"| Append
+    Engine -->|"unwrapTarget"| Unwrap
     Main -->|"startWatcher + stats sink<br/>(undefined under performance mode)"| Watcher
     Watcher -->|"applyRules"| Engine
     Watcher -->|"navigate"| Location
@@ -143,11 +145,11 @@ Every storage/regex failure degrades instead of crashing the boot:
 ## References
 
 - Boot: `src/main.ts`
-- Core modules: `src/lib/core/settings.ts`, `src/lib/core/redirect-engine.ts`, `src/lib/core/decode-surface.ts`, `src/lib/core/watcher.ts`, `src/lib/core/stats.ts`
+- Core modules: `src/lib/core/settings.ts`, `src/lib/core/redirect-engine.ts`, `src/lib/core/decode-surface.ts`, `src/lib/core/unwrap-url.ts`, `src/lib/core/watcher.ts`, `src/lib/core/stats.ts`
 - Store: `src/lib/stores/settings.svelte.ts`
 - Dashboard orchestration: `src/lib/gui/dashboard.ts`, `src/lib/gui/dashboard-protocol.ts`, `src/lib/gui/autosave.svelte.ts`, `src/lib/gui/autosave-speed.ts`
-- Decisions: `docs/adr/0001-pure-engine-split.md`, `docs/adr/0003-blank-storage-restart.md`, `docs/adr/archive/0010-dashboard-about-blank-tab.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`, `docs/adr/0041-performance-mode.md`
+- Decisions: `docs/adr/0001-pure-engine-split.md`, `docs/adr/0003-blank-storage-restart.md`, `docs/adr/archive/0010-dashboard-about-blank-tab.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`, `docs/adr/0041-performance-mode.md`, `docs/adr/0046-unwrap-rule-kind.md`
 - Logging: `src/lib/core/log.ts`, `docs/architecture/logging.md`
 - Component docs: `docs/architecture/redirect-engine.md`, `docs/architecture/query-append.md`, `docs/architecture/settings-storage.md`, `docs/architecture/stats.md`, `docs/architecture/gui.md`, `docs/architecture/dashboard-protocol.md`, `docs/architecture/testing.md`, `docs/architecture/logging.md`
 
-Verified: 2026-11-09 — against `src/main.ts` (boot + drain), `settings.ts` load semantics, `stats-drain.ts`, and `watcher.ts` window.name read/write behavior.
+Verified: 2026-11-13 — against `src/main.ts` (boot + drain), `settings.ts` load semantics, `stats-drain.ts`, `unwrap-url.ts`, and `watcher.ts` window.name read/write behavior.

@@ -69,8 +69,8 @@ The persisted object under the `settings` key has this shape:
 the readable site regex is shown), an optional sparse `disabled` flag (`true` = the
 engine skips the group; absent = active), optional `previewEntries` (`url`,
 `testOutputUri`, optional `description`), and ordered `UrlRule[]`. The rule kinds are
-`replace`, `appendQuery`, `removeQuery`, and `checkpoint` (ADR 0002, ADR 0019, ADR 0044);
-enable/disable is group-level only (ADR 0038).
+`replace`, `appendQuery`, `removeQuery`, `checkpoint`, and `unwrap` (ADR 0002, ADR 0019,
+ADR 0044, ADR 0046); enable/disable is group-level only (ADR 0038).
 
 `defaultLocked` is no longer part of the shape (ADR 0029): normalization only copies known
 fields, so a stored value from an older profile is dropped silently on load — no migration.
@@ -119,16 +119,18 @@ sequenceDiagram
   pair starts folded), and save drops the selection once it no longer resolves after pruning.
 - **Stored rules replace the example list.** `EXAMPLE_RULES` is the first-boot default and is
   deep-copied so the module constant never leaks into the mutable store.
-- **First-boot rules are real-world fixes:** fifteen groups (Wikipedia mobile→desktop,
-  YouTube mobile/Shorts/embed/share with `si` cleanup, `youtu.be` short links,
-  old/new/i/np.reddit→www.reddit, Reddit share params, Google search params, Google
-  AMP→canonical, Amazon/Spotify/LinkedIn/Instagram/Facebook/TikTok/eBay cleanup, and
-  tracking-param removal), each with pinned test entries, a use-case `description`, and
-  a description on every preview entry. Site gates are anchored to `^https?://`, so
-  share/redirect wrappers that merely contain a gated host stay untouched; the tracking
-  group is the one content-gated exception and only edits query params. They ship
-  DISABLED (opt-in, ADR 0038); existing stored groups without the flag stay active
-  (no migration).
+- **First-boot rules are real-world fixes:** twenty-seven groups (Wikipedia
+  mobile→desktop, YouTube mobile/Shorts/embed/share with `si` cleanup, `youtu.be` short
+  links, old/new/i/np.reddit→www.reddit, Reddit share params, Google search params +
+  cleanup, Google AMP→canonical, Google Maps/Stack Overflow/Bing cleanup, DuckDuckGo/
+  Yahoo/Google-Images `unwrap` wrappers, `redd.it` expansion, GitHub blob→raw,
+  GitHub tree→blob for file paths, Gist→raw, Wikimedia Commons `File:`→original file,
+  Amazon/Spotify/LinkedIn/Instagram/Facebook/TikTok/eBay cleanup, and tracking-param
+  removal), each with pinned test entries, a use-case `description`, and a description
+  on every preview entry. Site gates are anchored to `^https?://`, so share/redirect
+  wrappers that merely contain a gated host stay untouched; the tracking group is the
+  one content-gated exception and only edits query params. They ship DISABLED (opt-in,
+  ADR 0038); existing stored groups without the flag stay active (no migration).
 - **Disabled groups are inert for persistence:** their invalid/empty content does not block
   autosave, and prune-on-save keeps the group and its empty rules. The red invalid marker
   stays visible while authoring; the amber incomplete frame is suppressed while off.
@@ -215,7 +217,7 @@ flowchart LR
   `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`,
   `docs/adr/0037-settings-export-import-dialog.md`,
   `docs/adr/0038-per-group-enable-disable.md`, `docs/adr/0040-skipped-step-visibility-precedence.md`,
-  `docs/adr/0041-performance-mode.md`
+  `docs/adr/0041-performance-mode.md`, `docs/adr/0046-unwrap-rule-kind.md`
 - Related docs: `docs/architecture/system-overview.md`, `docs/architecture/gui.md`
 
-Verified: 2026-11-09 — against `settings.ts` load/normalize (read-failure guard, `lastSelection` bounds, example groups) and the store save path.
+Verified: 2026-11-13 — against `settings.ts` load/normalize (read-failure guard, `lastSelection` bounds, twenty-seven example groups, `unwrap`) and the store save path.

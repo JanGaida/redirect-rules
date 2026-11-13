@@ -110,9 +110,15 @@ describe("buildStatsView", () => {
     it("keeps the fixed kind order and zero rows without configured rules", () => {
         const view = buildStatsView([], { counts: {}, total: 0, last: null }, "en");
 
-        expect(view.byKind.map((row) => row.kind)).toEqual(["replace", "appendQuery", "removeQuery", "checkpoint"]);
-        expect(view.byKind.map((row) => row.count)).toEqual([0, 0, 0, 0]);
-        expect(view.byKind.map((row) => row.share)).toEqual([0, 0, 0, 0]);
+        expect(view.byKind.map((row) => row.kind)).toEqual([
+            "replace",
+            "appendQuery",
+            "removeQuery",
+            "checkpoint",
+            "unwrap",
+        ]);
+        expect(view.byKind.map((row) => row.count)).toEqual([0, 0, 0, 0, 0]);
+        expect(view.byKind.map((row) => row.share)).toEqual([0, 0, 0, 0, 0]);
         expect(view.appliedTotal).toBe(0);
         expect(view.activeRules).toBe(0);
         expect(view.zeroRules).toBe(0);
@@ -202,6 +208,7 @@ describe("buildStatsView", () => {
             ["appendQuery", 1],
             ["removeQuery", 0],
             ["checkpoint", 0],
+            ["unwrap", 0],
         ]);
         expect(view.byKind[0].share).toBeCloseTo(66.67, 1);
         expect(view.byKind[1].share).toBeCloseTo(33.33, 1);

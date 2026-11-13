@@ -75,6 +75,24 @@ describe("parseAssistantProposal", () => {
         }
     });
 
+    it("parses an unwrap rule", () => {
+        const result = parseAssistantProposal(
+            JSON.stringify({
+                siteRegex: "/duckduckgo\\.com\\/l\\//",
+                kind: "unwrap",
+                regex: "/[?&]uddg=([^&]+)/",
+            }),
+            "",
+        );
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.parsed.siteGroups[0]?.rules[0]?.rule).toEqual({
+                kind: "unwrap",
+                regex: "/[?&]uddg=([^&]+)/",
+            });
+        }
+    });
+
     it("parses a fenced single rule and injects the fallback gate", () => {
         const result = parseAssistantProposal(
             '```json\n{"kind":"replace","regex":"/x/","substitution":"y"}\n```',

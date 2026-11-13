@@ -254,6 +254,22 @@ describe("normalizeSettings — fail-soft shapes", () => {
         expect(out.rules[0].rules).toEqual([]);
     });
 
+    it("normalizes an unwrap rule to kind + regex", () => {
+        const out = normalizeSettings({
+            locale: "en",
+            rules: [{ siteRegex: "/a/", rules: [{ kind: "unwrap", regex: "/u=([^&]+)/" }] }],
+        });
+        expect(out.rules[0].rules[0]).toEqual({ kind: "unwrap", regex: "/u=([^&]+)/" });
+    });
+
+    it("drops an unwrap rule without a regex string", () => {
+        const out = normalizeSettings({
+            locale: "en",
+            rules: [{ siteRegex: "/a/", rules: [{ kind: "unwrap" }] }],
+        });
+        expect(out.rules[0].rules).toEqual([]);
+    });
+
     it("falls back to defaults for non-object storage", () => {
         const out = normalizeSettings("garbage");
         expect(out.rules).toEqual(EXAMPLE_RULES);

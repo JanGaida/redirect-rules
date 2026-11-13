@@ -12,8 +12,8 @@ function apply(url: string): string {
 }
 
 describe("EXAMPLE_RULES — first-boot defaults", () => {
-    it("ships the fifteen real-world site groups", () => {
-        expect(EXAMPLE_RULES).toHaveLength(15);
+    it("ships the twenty-seven real-world site groups", () => {
+        expect(EXAMPLE_RULES).toHaveLength(27);
     });
 
     it("fills every authored string and ships every group DISABLED (ADR 0038)", () => {
@@ -61,6 +61,13 @@ describe("EXAMPLE_RULES — first-boot defaults", () => {
     });
 
     it("is idempotent for every pinned and extra input", () => {
+        // * G9 + G10 are deliberately two-phase: tree file -> blob -> raw. The
+        //   single-pass loop excludes their tree inputs; the next test pins the pair.
+        const treeInputs = new Set(
+            EXAMPLE_RULES.flatMap((site) => (site.previewEntries ?? []).map((entry) => entry.url)).filter((url) =>
+                url.includes("/tree/"),
+            ),
+        );
         const urls = [
             ...EXAMPLE_RULES.flatMap((site) => (site.previewEntries ?? []).map((entry) => entry.url)),
             "https://m.youtube.com/watch?v=abc",
@@ -68,6 +75,16 @@ describe("EXAMPLE_RULES — first-boot defaults", () => {
             "https://youtu.be/abc123?si=xyz&t=42",
             "https://www.google.com/amp/s/example.com/article?amp=1#top",
             "https://www.google.com/search?q=x&num=50&udm=48",
+            "https://www.google.com/search?q=x&sxsrf=abc&ei=def",
+            "https://www.google.com/maps/place/X?entry=ttu&g_ep=abc",
+            "https://stackoverflow.com/questions/1/x?utm_source=y",
+            "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2F",
+            "https://www.bing.com/search?q=x&cvid=y&form=QBLH",
+            "https://r.search.yahoo.com/_ylt=x/RU=https%3A%2F%2Fexample.com%2F/RK=2",
+            "https://redd.it/abc123?share_id=x",
+            "https://github.com/o/r/blob/main/a.ts",
+            "https://gist.github.com/u/abcdef/raw/a.sh",
+            "https://commons.wikimedia.org/wiki/File:Example.jpg",
             "https://example.com/p?utm_source=a&id=1",
             "https://www.amazon.de/dp/ASIN/ref=sr_1_1?psc=1",
             "https://open.spotify.com/track/ID?si=x",
@@ -80,9 +97,19 @@ describe("EXAMPLE_RULES — first-boot defaults", () => {
             "https://example.com/?utm_source=x#frag",
         ];
         for (const url of urls) {
+            if (treeInputs.has(url)) continue;
             const once = apply(url);
             expect(apply(once), url).toBe(once);
         }
+    });
+
+    it("pins the GitHub tree→blob→raw two-phase normalization", () => {
+        const treeFile = "https://github.com/owner/repo/tree/main/src/index.ts";
+        const blob = apply(treeFile);
+        expect(blob).toBe("https://github.com/owner/repo/blob/main/src/index.ts");
+        const raw = apply(blob);
+        expect(raw).toBe("https://raw.githubusercontent.com/owner/repo/main/src/index.ts");
+        expect(apply(raw)).toBe(raw);
     });
 
     it("normalizes mobile, Shorts, short links, variants, search, AMP and tracking", () => {
@@ -99,7 +126,9 @@ describe("EXAMPLE_RULES — first-boot defaults", () => {
             ["https://new.reddit.com/r/x", "https://www.reddit.com/r/x"],
             ["https://i.reddit.com/r/x", "https://www.reddit.com/r/x"],
             ["https://np.reddit.com/r/x", "https://www.reddit.com/r/x"],
-            ["https://www.google.com/search?q=x&num=50&udm=48", "https://www.google.com/search?q=x&num=100&udm=14"],
+            ["https://www.google.com/search?q=x&num=50&udm=48", "https://www.google.com/search?q=x&num=100&udm=48"],
+            ["https://www.google.com/search?q=x&udm=2", "https://www.google.com/search?q=x&udm=2&num=100"],
+            ["https://www.google.com/search?q=x&tbm=isch", "https://www.google.com/search?q=x&tbm=isch&num=100"],
             ["https://www.google.com/amp/s/example.com/article?amp=1#top", "https://example.com/article#top"],
             ["https://www.google.com/amp/s/example.com/article/amp?foo=1", "https://example.com/article?foo=1"],
             ["https://www.google.com/amp/s/example.com/article?amp=1&foo=2", "https://example.com/article?foo=2"],
@@ -139,6 +168,36 @@ describe("EXAMPLE_RULES — first-boot defaults", () => {
             ],
             ["https://old.reddit.com/r/x?share_id=z", "https://www.reddit.com/r/x"],
             ["https://example.com/p?id=1&gbraid=x&srsltid=y&ref_src=z", "https://example.com/p?id=1"],
+        ];
+        for (const [input, expected] of cases) expect(apply(input), input).toBe(expected);
+    });
+
+    it("normalizes search, wrapper, developer and file links", () => {
+        const cases: ReadonlyArray<readonly [input: string, expected: string]> = [
+            [
+                "https://www.google.com/search?q=x&num=100&udm=2&sxsrf=abc&ei=def",
+                "https://www.google.com/search?q=x&num=100&udm=2",
+            ],
+            ["https://www.google.com/maps/place/X?entry=ttu&g_ep=abc", "https://www.google.com/maps/place/X"],
+            [
+                "https://stackoverflow.com/questions/1/x?utm_source=share&answertab=votes",
+                "https://stackoverflow.com/questions/1/x?answertab=votes",
+            ],
+            ["https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpage%3Fa%3D1", "https://example.com/page?a=1"],
+            [
+                "https://www.google.com/imgres?imgurl=https%3A%2F%2Fexample.com%2Fa.jpg&tbnid=x",
+                "https://example.com/a.jpg",
+            ],
+            ["https://www.bing.com/search?q=x&cvid=abc&form=QBLH", "https://www.bing.com/search?q=x"],
+            ["https://r.search.yahoo.com/_ylt=x/RU=https%3a%2f%2fexample.com%2f/RK=2", "https://example.com/"],
+            ["https://redd.it/abc123?share_id=x", "https://www.reddit.com/comments/abc123"],
+            ["https://github.com/o/r/blob/main/a.ts", "https://raw.githubusercontent.com/o/r/main/a.ts"],
+            ["https://github.com/o/r/tree/main/a.ts", "https://github.com/o/r/blob/main/a.ts"],
+            ["https://gist.github.com/u/abcdef", "https://gist.githubusercontent.com/u/abcdef/raw"],
+            [
+                "https://commons.wikimedia.org/wiki/File:Example.jpg",
+                "https://commons.wikimedia.org/wiki/Special:Redirect/file/Example.jpg",
+            ],
         ];
         for (const [input, expected] of cases) expect(apply(input), input).toBe(expected);
     });

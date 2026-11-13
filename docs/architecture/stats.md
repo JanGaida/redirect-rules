@@ -46,8 +46,9 @@ flowchart TB
   watcher, so no sink is created, no per-redirect GM write happens, and the `window.name` delta
   stash is skipped. The sink semantics and storage shape are unchanged (the seed is additive).
 - Identity is `ruleHash(siteRegex, rule)`: a stable content hash over the kind-specific tuple
-  (`removeQuery` hashes `regex` + `keys`). Editing a rule changes its hash and therefore
-  resets its counter; duplicate rules collide by design. There are no persisted rule ids.
+  (`removeQuery` hashes `regex` + `keys`; `unwrap` hashes `regex`). Editing a rule changes
+  its hash and therefore resets its counter; duplicate rules collide by design. There are
+  no persisted rule ids.
 - The hash includes `checkpoint` rules, but a checkpoint never changes the URL. `applyRules`
   records only changed non-checkpoint steps, so a checkpoint row renders with a counter of `0`.
 
@@ -115,7 +116,7 @@ null` (`last.from`/`to` are raw page URLs). A failed-write recovery therefore lo
 - The tab renders the S3 insight layout. The hero shows the all-time redirect total as the
   dominant number, `Sites` / `Active rules` fact chips, and a kind donut whose center shows
   `appliedTotal` (summed applied-rule hits) and whose legend lists the fixed order
-  `replace`, `appendQuery`, `removeQuery`, `checkpoint` with counts and shares.
+  `replace`, `appendQuery`, `removeQuery`, `checkpoint`, `unwrap` with counts and shares.
 - `stats.total` counts redirects while `appliedTotal` counts applied rule hits. One redirect
   can apply several rules in a chain, so `appliedTotal` may exceed `stats.total`; every
   percentage (kind, top rule, site, footer) uses `appliedTotal` as denominator.
@@ -129,7 +130,8 @@ null` (`last.from`/`to` are raw page URLs). A failed-write recovery therefore lo
 - The only fold is the rules-by-group accordion; it starts closed. Every configured rule
   stays visible and rules keep chain order with a 1-based position chip, a kind chip, and a
   readable label (replace: `regex → substitution`; append: params with the readable gate
-  below; checkpoint: readable regex with the localized mode below). Zero-count rows are
+  below; checkpoint: readable regex with the localized mode below; unwrap: readable regex).
+  Zero-count rows are
   dimmed. Raw regex/params/mode text is confined to tooltips.
 - `buildStatsView(settings.rules, stats, locale)` in `stats-view.ts` is pure and derived on
   every settings/counter/locale change. Groups and sites sort by count descending, then
@@ -180,4 +182,4 @@ tiny and the impact is cosmetic (counter telemetry), so no CRDT/locking layer is
   `src/lib/gui/__tests__/stats-view.test.ts`
 - Related docs: `docs/architecture/system-overview.md`, `docs/architecture/gui.md`
 
-Verified: 2026-11-09 — against `stats.ts` (seed, read-failure/flush contract, per-context singleton, integer-validation gap) and `stats-drain.ts` (un-drained delta return, URL-free stash, truly-empty legacy adoption).
+Verified: 2026-11-13 — against `stats.ts` (seed, read-failure/flush contract, per-context singleton, `unwrap` hash) and `stats-drain.ts`; kind order incl. `unwrap`.

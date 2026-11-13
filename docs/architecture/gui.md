@@ -928,7 +928,7 @@ default-src 'none'; style-src 'unsafe-inline'; sandbox` — a sandboxed document
 flowchart LR
     subgraph Supported["Supported"]
         A["editor column + filter | preview card<br/>(2-zone grid + pointer/keyboard resize)"]
-        B["kind switch replace / appendQuery /<br/>removeQuery / checkpoint (regex carried over)"]
+        B["kind switch replace / appendQuery /<br/>removeQuery / checkpoint / unwrap (regex carried over)"]
         C["live regex validation<br/>+ save blocking"]
         D["export / import settings<br/>(JSON file)"]
         E["locale de / en + persisted<br/>logLevel, reactive"]
@@ -994,8 +994,8 @@ row; App keeps a bottom strip only for System/Info, which have no dock) with a
 small bottom padding, the CHAIN replaces the rule preview (per-step collapsible
 previews + prominent TOTAL start-vs-end block). The shipped rule set doubles as
 first-boot defaults (`EXAMPLE_RULES`, ADR 0003 amendment — real-world
-Wikipedia/YouTube/youtu.be/Reddit/Google, shopping, social and tracking-cleanup fixes,
-with pinned test entries, now opt-in per ADR 0038);
+Wikipedia/YouTube/youtu.be/Reddit/Google, search, shopping, social, developer, file and
+tracking-cleanup fixes, with pinned test entries, now opt-in per ADR 0038);
 the e2e suite keeps
 seeding its own realistic set. Binding contract (R51): normalize emits UNIFORM STRINGS
 (preview entry `testOutputUri`/`description`, appendQuery/removeQuery gate regex = `""`
@@ -1096,7 +1096,7 @@ Stats insight layout (05.11., decisions log): the Stats tab adopted the S3 proto
 reversed the “no folds” rule for one surface. The hero keeps the all-time redirect total and
 adds `Sites`/`Active rules` fact chips plus a kind donut; the donut center shows the summed
 applied-rule hits (`appliedTotal`) and its legend keeps the fixed
-`replace`/`appendQuery`/`removeQuery`/`checkpoint` order. The last redirect moved into its own card and
+`replace`/`appendQuery`/`removeQuery`/`checkpoint`/`unwrap` order. The last redirect moved into its own card and
 reuses the Rules-tab `.rr-preview-grid` field surface with URI-toned spans. `Top rules`
 ranks the active rules (count descending, then name/site/source order; the component shows
 six) beside the site groups card, and both share one row height. A rules-by-group accordion
@@ -1211,6 +1211,6 @@ URL/chain divider.
 - Stats tab: `src/lib/gui/tabs/StatsTab.svelte` + `src/lib/gui/stats-view.ts` (ADR 0027); component doc: `docs/architecture/stats.md`
 - Settings schema/store: `docs/architecture/settings-storage.md`
 - Dashboard protocol/host: `docs/architecture/dashboard-protocol.md`
-- Decisions: `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
+- Decisions: `docs/adr/0046-unwrap-rule-kind.md` (unwrap kind), `docs/adr/0045-mobile-layout-bottom-nav-and-pane-switch.md` (responsive dashboard layout), `docs/adr/0040-skipped-step-visibility-precedence.md` (global/local skipped-step visibility), `docs/adr/0039-delete-undo-toast.md` (delete undo toast), `docs/adr/0031-dashboard-interaction-model.md` (current dashboard contract), `docs/adr/0038-per-group-enable-disable.md` (group on/off), `docs/adr/0037-settings-export-import-dialog.md` (transfer dialog), `docs/adr/0035-assistant-tab.md` (assistant rail tab), `docs/adr/0032-touch-input-support.md` (touch/viewport contract), `docs/adr/0011-dashboard-hash-takeover.md` (hosting), `docs/adr/0012-dashboard-host-stub.md` (host), `docs/adr/0013-manual-theme-toggle.md` (theme), `docs/adr/0018-ui-ux-remediation.md` (a11y/i18n/contrast), `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0002-typed-rule-kinds.md`, `docs/adr/0003-blank-storage-restart.md` (example-rules amendment)
 
-Verified: 2026-11-11 — changelog.ts (release-heading link unwrap), InfoTab.svelte, StatsTab.svelte banner inset, dashboard.css, App.svelte, autosave.svelte.ts, RulesTab.svelte, RuleEditor.svelte, icon.ts, preview.ts, motion.ts
+Verified: 2026-11-13 — RuleEditor kind switch incl. unwrap, StatsTab/StatsView kind order, dashboard.css, preview.ts, RulesTab, App.svelte, icon.ts.
