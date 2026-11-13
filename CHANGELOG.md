@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/JanGaida/redirect-rules/compare/v1.1.1...v1.2.0) (2026-11-13)
+
+
+### Features
+
+* **rules:** add unwrap kind and twelve first-boot use cases ([5e9e1d1](https://github.com/JanGaida/redirect-rules/commit/5e9e1d1dee30bad639673f1abc604b0e0e163664))
+
 ## [1.1.1](https://github.com/JanGaida/redirect-rules/compare/v1.1.0...v1.1.1) (2026-11-11)
 
 
