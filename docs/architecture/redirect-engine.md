@@ -17,6 +17,7 @@ flowchart TB
         Compile["compileRules()"]
         Apply["applyRules()"]
         Append["append-query.ts<br/>(appendQueryParams)"]
+        Unwrap["unwrap-url.ts<br/>(unwrapTarget)"]
         Watcher["watcher.ts<br/>(createWatcher, startWatcher)"]
         Preview["preview.ts<br/>(previewGroup, previewChain)"]
         Stats["stats.ts<br/>(StatsSink, ruleHash)"]
@@ -26,6 +27,7 @@ flowchart TB
     Compile -->|"gate regex / rule regex"| Parse
     Compile -->|"CompiledSiteRule[]"| Apply
     Apply -->|"appendQuery kind"| Append
+    Apply -->|"unwrap kind"| Unwrap
     Apply -->|"appendQuery gate test"| Decode
     Apply -->|"checkpoint gate test"| Parse
     Append -->|"key match test"| Decode
@@ -50,12 +52,14 @@ flowchart TB
     Kind -->|"appendQuery"| Gate2{"regex authored?"}
     Kind -->|"removeQuery"| RQGate{"regex authored?"}
     Kind -->|"checkpoint"| CheckpointRe["checkpointRe = stripGlobalFlag(parseRegex(...))"]
+    Kind -->|"unwrap"| UnwrapRe["unwrapRe = stripGlobalFlag(parseRegex(...))"]
     Gate2 -->|"no"| AppendRule["gateRe = null"]
     Gate2 -->|"yes"| AppendGate["gateRe = stripGlobalFlag(...)"]
     RQGate -->|"no"| RQRule["gateRe = null<br/>keys kept"]
     RQGate -->|"yes"| RQGateRe["gateRe = stripGlobalFlag(...)"]
     Replace --> Try{"throws?"}
     CheckpointRe --> Try
+    UnwrapRe --> Try
     AppendGate --> Try
     AppendRule --> Try
     RQGateRe --> Try
@@ -86,6 +90,11 @@ flowchart TB
   `&`-separated, matched through `paramKeySurface`, and a trailing `*` is a
   prefix wildcard (`*` alone clears the query). Duplicates are all removed, the
   fragment is never touched, and an emptied query drops the `?` (ADR 0044).
+- `unwrap` (ADR 0046) matches the RAW current url (like `replace`/`checkpoint`,
+  not `querySurface`), decodes capture group 1 (or the whole match) ONCE with
+  `decodeURIComponent`, and replaces the WHOLE url only when the target is an
+  absolute `http(s)` URL. No `+`→space, no re-encoding, no `new URL()`; the
+  fragment comes from the target. Empty regexes are dropped at compile.
 - Whitespace normalization: `parseRegex` rewrites
   authored literal spaces and `\s` OUTSIDE character classes into the
   both-variants class `(?:%20|\s)` — `location.href` always carries `%20`, so
@@ -97,9 +106,11 @@ flowchart TB
   percent-escapes decoded (`filter%5Bquality%5D=` visible as `filter[quality]=`),
   `+` read as space, path/fragment raw. Motivation: gates and params strings are
   authored RAW while pages deliver keys percent-encoded; a raw-exact test appended
-  duplicates until the page bounced back (A→B→A loop). The URL string itself is
-  still never decoded for EDITS — `appendQueryParams`/`removeQueryParams` keep the
-  raw-encoding contract intact; site gates stay tested against the raw url.
+  duplicates until the page bounced back (A→B→A loop). The query-surgery kinds
+  never decode the URL string for EDITS — `appendQueryParams`/`removeQueryParams`
+  keep the raw-encoding contract intact; site gates stay tested against the raw
+  url. `unwrap` is the one explicit edit-level decode: it decodes only the
+  captured wrapper target (ADR 0046).
   Details: `docs/architecture/query-append.md` + `decode-surface.ts`.
 
 ## Application — pure single pass (`applyRules`)
@@ -114,6 +125,7 @@ flowchart TB
     Kind -->|"appendQuery"| QGate{"gateRe<br/>absent or matches?"}
     Kind -->|"removeQuery"| RQGate{"gateRe<br/>absent or matches?"}
     Kind -->|"checkpoint"| CGate{"checkpointRe<br/>matches current?"}
+    Kind -->|"unwrap"| Unwrap["unwrapTarget(current, unwrapRe)<br/>decode group 1 · http(s) only"]
     CGate -->|"continue + match<br/>or stop + no match"| NextRule["next rule"]
     CGate -->|"continue + no match<br/>or stop + match"| Abort["abort rest of group"]
     NextRule --> Rules
@@ -125,6 +137,7 @@ flowchart TB
     Replace --> Changed{"result differs?"}
     Append --> Changed
     Remove --> Changed
+    Unwrap --> Changed
     Changed -->|"yes"| Record["Log.info + applied[] entry<br/>current = result"]
     Changed -->|"no"| Next["Log.debug — did not change"]
     Record --> Out
@@ -141,7 +154,8 @@ flowchart TB
   `gate-no-match`, `checkpoint-continue`, `checkpoint-stopped`). `applyRules`,
   `previewChain`, and `previewGroup` consume it; preview only builds colored spans.
 - `applyRules` records only changed non-checkpoint steps as `AppliedRule`.
-  Checkpoints therefore never appear in the applied list or in stats counters.
+  Checkpoints therefore never appear in the applied list or in stats counters;
+  a changed `unwrap` step records like replace/append/remove.
 
 ## Watcher — the side-effect layer (`watcher.ts`)
 
@@ -202,12 +216,14 @@ flowchart LR
         E["SPA: pushState + popstate"]
         F["checkpoint: continue/stop<br/>inside the current group"]
         G["group on/off: engine skips<br/>disabled groups (ADR 0038)"]
+        I["unwrap rules: one-pass decode<br/>of http(s) wrapper targets (ADR 0046)"]
     end
     subgraph NotSupported["Deliberately not supported"]
         X["worker pools / concurrency<br/>(legacy dead code, dropped)"]
         Y["history.replaceState hook<br/>(legacy parity)"]
         Z["re-triggering site gates<br/>mid-run after a rewrite"]
         AA["per-rule / per-step enable-disable<br/>(group level only, ADR 0038)"]
+        AB["network-resolved wrappers<br/>(Google News batchexecute)"]
     end
 ```
 
@@ -228,8 +244,9 @@ buttons were removed in favor of the drag path plus a delete/clone-only action s
 - Preview model (engine-parity replays): `src/lib/core/preview.ts`
 - Stats (redirect counters): `src/lib/core/stats.ts`
 - Rule types: `src/lib/core/settings.ts`
-- Specs: `src/lib/core/__tests__/redirect-engine.test.ts`, `src/lib/core/__tests__/watcher.test.ts`, `src/lib/core/__tests__/corpus.test.ts`, `src/lib/core/__tests__/preview.test.ts`, `src/lib/core/__tests__/stats.test.ts`, `src/lib/core/__tests__/decode-surface.test.ts`
+- Unwrap target decode: `src/lib/core/unwrap-url.ts`
+- Specs: `src/lib/core/__tests__/redirect-engine.test.ts`, `src/lib/core/__tests__/watcher.test.ts`, `src/lib/core/__tests__/corpus.test.ts`, `src/lib/core/__tests__/preview.test.ts`, `src/lib/core/__tests__/stats.test.ts`, `src/lib/core/__tests__/decode-surface.test.ts`, `src/lib/core/__tests__/unwrap-url.test.ts`
 - Query merge: `docs/architecture/query-append.md`
-- Decisions: `docs/adr/0001-pure-engine-split.md`, `docs/adr/0017-shared-compiled-step-executor.md`, `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0038-per-group-enable-disable.md`, `docs/adr/0044-remove-query-rule-kind.md`
+- Decisions: `docs/adr/0001-pure-engine-split.md`, `docs/adr/0017-shared-compiled-step-executor.md`, `docs/adr/0019-checkpoint-rule-kind.md`, `docs/adr/0038-per-group-enable-disable.md`, `docs/adr/0044-remove-query-rule-kind.md`, `docs/adr/0046-unwrap-rule-kind.md`
 
-Verified: 2026-11-09 — removeQuery compile/execute branches, gates and query surgery against `redirect-engine.ts`/`append-query.ts`; replace sticky-flag stripping, window.name guard and stats ordering rechecked.
+Verified: 2026-11-13 — unwrap compile/execute + wrapper decode against `redirect-engine.ts`/`unwrap-url.ts`; removeQuery, sticky-flag stripping, window.name guard and stats ordering rechecked.

@@ -1,6 +1,6 @@
 # ADR 0003: Blank storage restart — no migration from the legacy settings keys
 
-- Status: accepted (2026-10-25; amended 2026-11-09 — fifteen opt-in first-boot groups)
+- Status: accepted (2026-10-25; amended 2026-11-09 — first opt-in first-boot groups; amended 2026-11-13 — twenty-seven groups, five rule kinds incl. `unwrap`, explicit udm/tbm filter kept)
 - Deciders: project owner
 - Applies to: `src/lib/core/storage.ts`, `src/lib/core/settings.ts`
 
@@ -24,12 +24,12 @@ old key — code that runs exactly once per user.
 
 **Rule of thumb:** for a personal-use tool, a clean schema beats one-shot migration code.
 
-## Current state (2026-11-09)
+## Current state (2026-11-13)
 
 The amendment chain is resolved to one state; the original blank-restart semantics
 are unchanged.
 
-- First boot ships fifteen real-world groups, each with a site gate, an idempotent
+- First boot ships twenty-seven real-world groups, each with a site gate, an idempotent
   chain, and pinned test entries:
     - Wikipedia mobile → desktop (`<lang>.m.wikipedia.org` → `<lang>.wikipedia.org`).
     - YouTube: host normalization, `checkpoint` early-exit, `si` cleanup, and both
@@ -37,15 +37,23 @@ are unchanged.
       and fragment preserved).
     - `youtu.be/<id>` short links → `www.youtube.com/watch?v=<id>`.
     - `old`/`new`/`i`/`np.reddit.com` → `www.reddit.com`; Reddit share params removed.
-    - Google search: append `num=100&udm=14`.
+    - Google search: `num=100` plus Web filter (`udm=14`) when no `udm`/`tbm` filter is
+      present; a separate cleanup group strips session and click tracking.
     - Google AMP (`/amp/s/…`, `/amp`, `?amp`) → the canonical URL.
+    - Google Maps, Stack Overflow and Bing: share, campaign and session tracking removed.
+    - DuckDuckGo, Yahoo and Google Images: redirect wrappers decoded to their target via
+      the `unwrap` kind ([ADR 0046](0046-unwrap-rule-kind.md)); Google Images covers the
+      legacy `imgres` form, not modern `tbm=isch` results.
+    - `redd.it/<id>` → `www.reddit.com/comments/<id>` with share params removed.
+    - GitHub `blob` → raw, `tree` file paths → `blob`, Gist → raw, Wikimedia Commons
+      `File:` pages → `Special:Redirect/file/`.
     - Amazon, eBay, Spotify, LinkedIn, Instagram, Facebook and TikTok: affiliate,
       share and click tracking removed.
     - Tracking params (`utm_*`, `fbclid`, `gclid`, `gbraid`, `wbraid`, `dclid`,
       `msclkid`, `yclid`, `mc_cid`, `mc_eid`, `mkt_tok`, `igshid`, `twclid`,
       `srsltid`, `_openstat`, `ref_src`, `ref_url`) removed via the `removeQuery` kind
       ([ADR 0044](0044-remove-query-rule-kind.md)).
-- All fifteen ship `disabled: true` (opt-in, [ADR 0038](0038-per-group-enable-disable.md)):
+- All twenty-seven ship `disabled: true` (opt-in, [ADR 0038](0038-per-group-enable-disable.md)):
   first boot never rewrites URLs until the user activates a group. Stored groups stay
   active. Per-group `disabled` is part of the persisted `SiteRule` and needs no schema
   change beyond the existing field.
@@ -65,7 +73,7 @@ are unchanged.
 - No dead migration code to maintain, test, or explain in docs.
 - The settings shape stays explicit and is documented in
   `docs/architecture/settings-storage.md`.
-- A fresh install demonstrates real value and the full rule model (four rule kinds,
+- A fresh install demonstrates real value and the full rule model (five rule kinds,
   ordered chains, site gates, pinned tests) without rewriting URLs unasked.
 - Storage key reads/writes are trivial and covered by the settings/store specs.
 

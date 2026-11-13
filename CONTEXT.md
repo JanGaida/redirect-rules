@@ -88,6 +88,7 @@ src/
     │   ├── settings.ts           # Settings types/defaults/normalize + load/save
     │   ├── redirect-engine.ts    # compileRules + executeCompiledGroup + applyRules — PURE
     │   ├── append-query.ts       # appendQueryParams — pure string surgery
+    │   ├── unwrap-url.ts         # unwrapTarget — one-pass wrapper-target decode + http(s) guard
     │   ├── decode-surface.ts     # querySurface/paramKeySurface — matching-level decode
     │   ├── preview.ts            # previewGroup/previewChain/splitUrlComponents/expandSubstitution — PURE
     │   ├── stats.ts              # StatsSink (eager delta) + ruleHash + per-context getStatsSink singleton
@@ -98,7 +99,7 @@ src/
     │   ├── assistant-proposal.ts # parseAssistantProposal + resolveProposal (tolerant answer → strict transfer)
     │   ├── encoding.ts           # decodeText for build-time Base64 payloads
     │   ├── watcher.ts            # SPA hook, loop guard (window.name), location.replace, stats recording
-    │   └── __tests__/            # 20 vitest files + gm-stubs.ts
+    │   └── __tests__/            # 21 vitest files + gm-stubs.ts
     ├── stores/
     │   └── settings.svelte.ts    # $state<Settings> singleton — single source of truth, prune-on-save
     └── gui/                      # Svelte 5 dashboard (hash-takeover tab, lazy via GM menu — ADR 0011/0012)
@@ -159,13 +160,14 @@ the docs gate rejects prototype/analysis path references.
 `redirect-rules.code-workspace` are tracked, every other file there is gitignored — do not
 add editor config elsewhere.
 
-## Rule Model (ADR 0002)
+## Rule Model (ADR 0002, ADR 0046)
 
 ```ts
 type ReplaceRule = { kind: "replace"; regex: string; substitution: string };
 type AppendQueryRule = { kind: "appendQuery"; regex?: string; params: string }; // regex normalizes to ""
 type RemoveQueryRule = { kind: "removeQuery"; regex?: string; keys: string }; // regex normalizes to ""
 type CheckpointRule = { kind: "checkpoint"; regex: string; mode: "continue" | "stop" };
+type UnwrapRule = { kind: "unwrap"; regex: string }; // group 1 (or whole match) = encoded target
 type SiteRule = {
     siteRegex: string;
     description?: string;
@@ -187,6 +189,10 @@ type SiteRule = {
 - `checkpoint`: tests the CURRENT url without changing it; `continue` proceeds only on a
   match, `stop` aborts the rest of the group on a match (ADR 0019). It is not an
   `AppliedRule` and never increments stats.
+- `unwrap`: matches the RAW url, decodes capture group 1 (or the whole match) once with
+  `decodeURIComponent`, and replaces the WHOLE url only when the target is absolute
+  `http(s)` (ADR 0046). No `+`→space, no re-encoding, no `new URL()`; the fragment comes
+  from the target. `unwrapTarget` owns the decode + scheme guard.
 - Engine: pure single pass — site gates evaluated ONCE against the input url;
   rules apply sequentially within matched groups (legacy semantics, corpus-pinned).
 - Group on/off (ADR 0038): `SiteRule.disabled` is a sparse group-level flag

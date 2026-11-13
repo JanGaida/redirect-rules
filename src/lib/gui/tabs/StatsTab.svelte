@@ -102,6 +102,7 @@
         if (kind === "replace") return t("stats.kind.replace");
         if (kind === "appendQuery") return t("stats.kind.appendQuery");
         if (kind === "removeQuery") return t("stats.kind.removeQuery");
+        if (kind === "unwrap") return t("stats.kind.unwrap");
         return t("stats.kind.checkpoint");
     }
 

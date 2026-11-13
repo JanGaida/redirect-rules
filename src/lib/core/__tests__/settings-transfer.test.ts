@@ -190,6 +190,31 @@ describe("export envelope", () => {
             expect(entry.rule).toEqual({ kind: "removeQuery", regex: "", keys: "utm_*" });
         }
     });
+
+    it("canonicalizes an unwrap rule and keeps its required regex", () => {
+        const settings = makeSettings({
+            rules: [
+                {
+                    siteRegex: "/canonical\\.test/",
+                    rules: [{ kind: "unwrap", regex: "/u=([^&]+)/" }],
+                },
+            ],
+        });
+        const exported = buildExportEnvelope(settings, fullSelection(settings), {
+            appVersion: "1",
+            exportedAt: "2026-11-03T22:00:00.000Z",
+        });
+
+        expect(exported.siteGroups[0].rules[0].rule).toEqual({ kind: "unwrap", regex: "/u=([^&]+)/" });
+
+        const result = parseSettingsTransfer(JSON.stringify(exported));
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            const entry = result.parsed.siteGroups[0].rules[0];
+            expect(entry.valid).toBe(true);
+            expect(entry.rule).toEqual({ kind: "unwrap", regex: "/u=([^&]+)/" });
+        }
+    });
 });
 
 describe("parseSettingsTransfer", () => {
@@ -766,6 +791,12 @@ describe("ruleProblem", () => {
     it("flags an invalid removeQuery gate and accepts a valid one", () => {
         expect(ruleProblem({ kind: "removeQuery", regex: "/(bad/", keys: "a" })).toBe("regex");
         expect(ruleProblem({ kind: "removeQuery", regex: "/ok/", keys: "a" })).toBeNull();
+    });
+
+    it("flags an empty or invalid unwrap regex", () => {
+        expect(ruleProblem({ kind: "unwrap", regex: "" })).toBe("empty");
+        expect(ruleProblem({ kind: "unwrap", regex: "/(bad/" })).toBe("regex");
+        expect(ruleProblem({ kind: "unwrap", regex: "/u=([^&]+)/" })).toBeNull();
     });
 
     it("keeps a replace with a non-empty regex and empty substitution valid", () => {

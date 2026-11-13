@@ -21,7 +21,13 @@ const drafts = new WeakMap<UrlRule, Map<RuleKind, KindDraft>>();
 
 /** Whether a ChoiceGroup string is a known rule kind. */
 function isRuleKind(value: string): value is RuleKind {
-    return value === "replace" || value === "appendQuery" || value === "removeQuery" || value === "checkpoint";
+    return (
+        value === "replace" ||
+        value === "appendQuery" ||
+        value === "removeQuery" ||
+        value === "checkpoint" ||
+        value === "unwrap"
+    );
 }
 
 /** Stores the current kind's distinct field; the regex is intentionally skipped. */
@@ -34,7 +40,7 @@ function stash(rule: UrlRule): void {
     if (rule.kind === "replace") bucket.set("replace", { kind: "replace", substitution: rule.substitution });
     else if (rule.kind === "appendQuery") bucket.set("appendQuery", { kind: "appendQuery", params: rule.params });
     else if (rule.kind === "removeQuery") bucket.set("removeQuery", { kind: "removeQuery", keys: rule.keys });
-    else bucket.set("checkpoint", { kind: "checkpoint", mode: rule.mode });
+    else if (rule.kind === "checkpoint") bucket.set("checkpoint", { kind: "checkpoint", mode: rule.mode });
 }
 
 /** Builds the target shape: current regex plus the restored draft or kind defaults. */
@@ -49,6 +55,7 @@ function build(rule: UrlRule, kind: RuleKind, draft: KindDraft | undefined): Url
     if (kind === "removeQuery") {
         return { kind, regex, keys: draft?.kind === "removeQuery" ? draft.keys : "" };
     }
+    if (kind === "unwrap") return { kind, regex };
     return { kind, regex, mode: draft?.kind === "checkpoint" ? draft.mode : "continue" };
 }
 

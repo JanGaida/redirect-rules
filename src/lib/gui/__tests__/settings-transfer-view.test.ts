@@ -8,6 +8,7 @@ import {
     checkState,
     filterFieldRows,
     filterGroupRows,
+    formatRule,
     fullExportSelection,
     groupCheckState,
     groupParentDisabled,
@@ -375,5 +376,11 @@ describe("apply gating", () => {
             isApplyDisabled({ ...base, mode: "export", importMode: "merge", selectedUnits: 1, hasError: true }),
         ).toBe(true);
         expect(isApplyDisabled({ ...base, mode: "import", importMode: "merge", parsed: false })).toBe(true);
+    });
+});
+
+describe("formatRule", () => {
+    it("summarizes an unwrap rule with its regex", () => {
+        expect(formatRule({ kind: "unwrap", regex: "/u=([^&]+)/" })).toBe("/u=([^&]+)/");
     });
 });

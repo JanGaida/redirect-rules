@@ -1406,9 +1406,9 @@ test("a kind switch restores the previous kind's distinct fields (session draft)
     await rule.locator("> .rr-master-rule-summary").click();
     const fields = rule.locator(".rr-ed-fields");
 
-    // * Radio order = replace, appendQuery, removeQuery, checkpoint; the distinct
-    //   textarea follows the shared regex field. The native input is visually
-    //   hidden behind its label surface, so force the check.
+    // * Radio order = replace, appendQuery, removeQuery, checkpoint, unwrap; the
+    //   distinct textarea follows the shared regex field. The native input is
+    //   visually hidden behind its label surface, so force the check.
     const kinds = fields.getByRole("radio");
     const textareas = fields.locator("textarea");
     await expect(textareas.nth(1)).toHaveValue("new");
@@ -1469,8 +1469,8 @@ test("the stats tab renders the hero, donut, field-style last redirect, top rule
     const donut = hero.locator(".rr-stats-donut");
     await expect(donut).toHaveClass(/is-empty/);
     await expect(donut.locator(".rr-stats-donut-center strong")).toHaveText("0");
-    await expect(hero.locator(".rr-stats-donut-legend li")).toHaveCount(4);
-    await expect(hero.locator(".rr-stats-donut-legend li strong")).toHaveText(["0", "0", "0", "0"]);
+    await expect(hero.locator(".rr-stats-donut-legend li")).toHaveCount(5);
+    await expect(hero.locator(".rr-stats-donut-legend li strong")).toHaveText(["0", "0", "0", "0", "0"]);
 
     // * Last redirect reuses the Rules-tab field surface + URI tones.
     const lastCard = dashboard.locator(".rr-stats-last-card");
@@ -1534,7 +1534,7 @@ test("the stats tab renders a live redirect in the hero, donut, top rules, group
     await expect(donut).not.toHaveClass(/is-empty/);
     await expect(donut.locator(".rr-stats-donut-center strong")).toHaveText("1");
     const legendRows = hero.locator(".rr-stats-donut-legend li");
-    await expect(legendRows).toHaveCount(4);
+    await expect(legendRows).toHaveCount(5);
     await expect(legendRows.nth(0).locator("strong")).toHaveText("1");
     await expect(legendRows.nth(0).locator(".rr-stats-donut-share")).toHaveText("100%");
     await expect(legendRows.nth(1).locator("strong")).toHaveText("0");
@@ -1543,6 +1543,8 @@ test("the stats tab renders a live redirect in the hero, donut, top rules, group
     await expect(legendRows.nth(2).locator(".rr-stats-donut-share")).toHaveText("0%");
     await expect(legendRows.nth(3).locator("strong")).toHaveText("0");
     await expect(legendRows.nth(3).locator(".rr-stats-donut-share")).toHaveText("0%");
+    await expect(legendRows.nth(4).locator("strong")).toHaveText("0");
+    await expect(legendRows.nth(4).locator(".rr-stats-donut-share")).toHaveText("0%");
 
     const lastCard = dashboard.locator(".rr-stats-last-card");
     await expect(lastCard.locator(".rr-stats-last-fields .rr-preview-text").nth(0)).toContainText("/redirect-me.html");

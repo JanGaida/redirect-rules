@@ -232,6 +232,9 @@ function canonicalRule(rule: UrlRule): UrlRule {
     if (rule.kind === "removeQuery") {
         return { kind: "removeQuery", regex: rule.regex ?? "", keys: rule.keys };
     }
+    if (rule.kind === "unwrap") {
+        return { kind: "unwrap", regex: rule.regex };
+    }
     return { kind: "checkpoint", regex: rule.regex, mode: rule.mode };
 }
 
@@ -318,6 +321,11 @@ function parseRuleShape(raw: unknown, strict: boolean): { rule?: UrlRule; proble
                 keys: record.keys,
             },
         };
+    }
+
+    if (record.kind === "unwrap") {
+        if (typeof record.regex !== "string") return { problem: "structure" };
+        return { rule: { kind: "unwrap", regex: record.regex } };
     }
 
     if (record.kind === "checkpoint") {

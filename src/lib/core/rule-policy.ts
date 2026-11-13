@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: Rule policy — single source for emptiness/incompleteness/regex
 // ─────────────────────────────────────────────────────────────────────────────
-// * Mirrors the engine: a replace/checkpoint with an empty regex is dropped and
-//   an appendQuery with empty params is a no-op.
+// * Mirrors the engine: a replace/checkpoint/unwrap with an empty regex is dropped
+//   and an appendQuery with empty params is a no-op.
 // * `isRuleEmpty` = ENTIRELY empty (prune-on-save drops these).
 // * `isRuleIncomplete` = NOT usable by the engine (blocks persistence/import):
 //   substitution-only replace and gate-only appendQuery count as incomplete.
@@ -21,6 +21,7 @@ export type RuleProblem = "empty" | "regex";
 export function isRuleEmpty(rule: UrlRule): boolean {
     if (rule.kind === "replace") return rule.regex === "" && rule.substitution === "";
     if (rule.kind === "checkpoint") return rule.regex === "";
+    if (rule.kind === "unwrap") return rule.regex === "";
     if (rule.kind === "removeQuery") return rule.keys === "" && !rule.regex;
     return rule.params === "" && !rule.regex;
 }
@@ -36,6 +37,7 @@ export function isRuleEmpty(rule: UrlRule): boolean {
 export function isRuleIncomplete(rule: UrlRule): boolean {
     if (rule.kind === "replace") return rule.regex === "";
     if (rule.kind === "checkpoint") return rule.regex === "";
+    if (rule.kind === "unwrap") return rule.regex === "";
     if (rule.kind === "removeQuery") return rule.keys === "";
     return rule.params === "";
 }

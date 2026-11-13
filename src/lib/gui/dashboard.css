@@ -2657,7 +2657,8 @@ details.rr-master-rule[open] > .rr-master-rule-summary .rr-tri {
 }
 
 /* * Kind chip COLOR-CODED: replace = violet, appendQuery =
-     query-param tone (u-query), removeQuery = danger, checkpoint = orange. */
+     query-param tone (u-query), removeQuery = danger, checkpoint = orange,
+     unwrap = accent. */
 .rr-chip-replace {
     color: var(--rr-violet);
     background: var(--rr-violet-soft);
@@ -2676,6 +2677,11 @@ details.rr-master-rule[open] > .rr-master-rule-summary .rr-tri {
 .rr-chip-checkpoint {
     color: var(--rr-warn);
     background: var(--rr-warn-soft);
+}
+
+.rr-chip-unwrap {
+    color: var(--rr-accent);
+    background: var(--rr-accent-soft);
 }
 
 .rr-chip-site {
@@ -6716,6 +6722,10 @@ body.rr-dragging .rr-drag-handle {
     background: var(--rr-warn);
 }
 
+.rr-stats-donut-dot--unwrap {
+    background: var(--rr-accent);
+}
+
 .rr-stats-donut-share {
     color: var(--rr-faint);
     font-variant-numeric: tabular-nums;
@@ -6856,6 +6866,10 @@ body.rr-dragging .rr-drag-handle {
 
 .rr-stats-top-row--checkpoint {
     --rr-top-color: var(--rr-warn);
+}
+
+.rr-stats-top-row--unwrap {
+    --rr-top-color: var(--rr-accent);
 }
 
 .rr-stats-top-pos {
@@ -7083,6 +7097,10 @@ details.rr-stats-acc.is-empty .rr-stats-acc-count {
 
 .rr-stats-bar-fill--checkpoint {
     background: var(--rr-warn);
+}
+
+.rr-stats-bar-fill--unwrap {
+    background: var(--rr-accent);
 }
 
 .rr-stats-bar-count {

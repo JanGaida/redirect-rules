@@ -130,6 +130,7 @@ export function formatRule(rule: UrlRule): string {
     if (rule.kind === "replace") return `${rule.regex || "—"} → ${rule.substitution || "—"}`;
     if (rule.kind === "appendQuery") return `${rule.params || "—"}${rule.regex ? ` @ ${rule.regex}` : ""}`;
     if (rule.kind === "removeQuery") return `${rule.keys || "—"}${rule.regex ? ` @ ${rule.regex}` : ""}`;
+    if (rule.kind === "unwrap") return rule.regex || "—";
     return `${rule.regex || "—"} (${rule.mode})`;
 }
 
@@ -145,7 +146,13 @@ function rawRuleSummary(raw: unknown): string | undefined {
 function ruleKindLabel(rule: UrlRule | undefined, raw: unknown, t: Translate): string {
     const kind =
         rule?.kind ?? (typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>).kind : undefined);
-    if (kind === "replace" || kind === "appendQuery" || kind === "removeQuery" || kind === "checkpoint") {
+    if (
+        kind === "replace" ||
+        kind === "appendQuery" ||
+        kind === "removeQuery" ||
+        kind === "checkpoint" ||
+        kind === "unwrap"
+    ) {
         return t(`rules.kindShort.${kind}`);
     }
     return "—";

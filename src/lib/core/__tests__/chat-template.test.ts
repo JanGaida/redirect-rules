@@ -30,6 +30,7 @@ describe("renderChatTemplate", () => {
         expect(out).toContain('"kind": "appendQuery"');
         expect(out).toContain('"kind": "removeQuery"');
         expect(out).toContain("| `removeQuery` |");
+        expect(out).toContain("| `unwrap` |");
         expect(out).toContain("Meine Wünsche");
     });
 
@@ -66,7 +67,7 @@ describe("renderChatTemplate", () => {
     it("documents every rule kind in the shared contract table", () => {
         for (const locale of ["de", "en"] as const) {
             const out = renderChatTemplate(SITE, locale);
-            for (const kind of ["replace", "appendQuery", "removeQuery", "checkpoint"]) {
+            for (const kind of ["replace", "appendQuery", "removeQuery", "checkpoint", "unwrap"]) {
                 expect(out).toContain(`| \`${kind}\` |`);
             }
         }

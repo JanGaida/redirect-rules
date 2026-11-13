@@ -117,7 +117,9 @@ export function ruleHash(siteRegex: string, rule: UrlRule): string {
               ? ["appendQuery", rule.regex ?? "", rule.params]
               : rule.kind === "removeQuery"
                 ? ["removeQuery", rule.regex ?? "", rule.keys]
-                : ["checkpoint", rule.regex, rule.mode];
+                : rule.kind === "unwrap"
+                  ? ["unwrap", rule.regex]
+                  : ["checkpoint", rule.regex, rule.mode];
     const key = `${siteRegex}\u0000${JSON.stringify(parts)}`;
     let hash = 5381;
     for (let i = 0; i < key.length; i++) {

@@ -132,6 +132,12 @@
             title: t("rules.kind.checkpoint"),
             icon: "flag" as const,
         },
+        {
+            value: "unwrap",
+            label: t("rules.kindShort.unwrap"),
+            title: t("rules.kind.unwrap"),
+            icon: "openInNew" as const,
+        },
     ]);
     const checkpointModeChoiceOptions = $derived([
         { value: "continue", label: t("rules.mode.continue"), icon: "playArrow" as const },
@@ -502,9 +508,11 @@
                             class="rr-row-label"
                             id={regexLabelId}
                             title={t(
-                                rule.kind === "replace" || rule.kind === "checkpoint"
-                                    ? "rules.regex.hint"
-                                    : "rules.gateRegex.hint",
+                                rule.kind === "unwrap"
+                                    ? "rules.unwrapRegex.hint"
+                                    : rule.kind === "replace" || rule.kind === "checkpoint"
+                                      ? "rules.regex.hint"
+                                      : "rules.gateRegex.hint",
                             )}
                         >
                             {t("rules.regex")}
@@ -514,7 +522,13 @@
                             invalid={regexInvalid(rule.regex)}
                             highlight="regex"
                             ariaLabelledby={regexLabelId}
-                            title={t(rule.kind === "replace" ? "rules.regex.hint" : "rules.gateRegex.hint")}
+                            title={t(
+                                rule.kind === "unwrap"
+                                    ? "rules.unwrapRegex.hint"
+                                    : rule.kind === "replace" || rule.kind === "checkpoint"
+                                      ? "rules.regex.hint"
+                                      : "rules.gateRegex.hint",
+                            )}
                         >
                             {#snippet leading()}.*{/snippet}
                             {#snippet trailing()}<RegexManualReference />{/snippet}

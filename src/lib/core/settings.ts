@@ -123,8 +123,15 @@ export interface CheckpointRule {
     mode: "continue" | "stop";
 }
 
+/** Rule kind: decode a redirect wrapper to its percent-encoded target (see `unwrap-url.ts`). */
+export interface UnwrapRule {
+    kind: "unwrap";
+    /** Regex; capture group 1 (or the whole match) is the encoded target. */
+    regex: string;
+}
+
 /** A URL rule — discriminated by `kind`. */
-export type UrlRule = ReplaceRule | AppendQueryRule | RemoveQueryRule | CheckpointRule;
+export type UrlRule = ReplaceRule | AppendQueryRule | RemoveQueryRule | CheckpointRule | UnwrapRule;
 
 /** Type guard for a preview entry shape (fail-soft normalization). */
 export interface PreviewEntry {
@@ -199,9 +206,9 @@ export interface Settings {
 }
 
 /**
- * First-boot rule set: fifteen real-world groups — media, search, shopping,
- * social and tracking cleanup. Each group carries a gate (host-anchored except
- * the content-gated tracking group), an idempotent rule chain, a use-case
+ * First-boot rule set: twenty-seven real-world groups — media, search, shopping,
+ * social, developer and file cleanup. Each group carries a gate (host-anchored
+ * except the content-gated tracking group), an idempotent rule chain, a use-case
  * `description`, and pinned test entries (`testOutputUri`) with their own
  * descriptions, so the engine is verifiable on a fresh install.
  * ! All groups ship DISABLED (opt-in, ADR 0038): first boot never rewrites URLs
@@ -363,13 +370,13 @@ export const EXAMPLE_RULES: SiteRule[] = [
     {
         // * TLD shape: com/de/co.uk/com.au — `[a-z]{2,3}` rejects lookalike hosts.
         siteRegex: "/^https?:\\/\\/(?:www\\.)?google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/search\\?/",
-        description: "Google Search: force 100 results with the Web filter",
+        description: "Google Search: force 100 results; Web filter unless one is set",
         disabled: true,
         previewEntries: [
             {
                 url: "https://www.google.com/search?q=redirect+rules",
                 testOutputUri: "https://www.google.com/search?q=redirect+rules&num=100&udm=14",
-                description: "Appends num=100 and udm=14 to a search URL.",
+                description: "Appends num=100 and defaults to the Web filter.",
             },
             {
                 url: "https://google.com/search?q=x",
@@ -378,8 +385,18 @@ export const EXAMPLE_RULES: SiteRule[] = [
             },
             {
                 url: "https://www.google.com/search?q=x&num=50&udm=48",
-                testOutputUri: "https://www.google.com/search?q=x&num=100&udm=14",
-                description: "Existing values are overwritten in place.",
+                testOutputUri: "https://www.google.com/search?q=x&num=100&udm=48",
+                description: "The existing num is overwritten; the explicit udm=48 filter is kept.",
+            },
+            {
+                url: "https://www.google.com/search?q=x&udm=2",
+                testOutputUri: "https://www.google.com/search?q=x&udm=2&num=100",
+                description: "An explicit filter is kept; only num=100 is added.",
+            },
+            {
+                url: "https://www.google.com/search?q=x&tbm=isch",
+                testOutputUri: "https://www.google.com/search?q=x&tbm=isch&num=100",
+                description: "A legacy tbm filter is preserved just like udm.",
             },
             {
                 url: "https://www.google.com/search?q=x&num=100&udm=14",
@@ -387,7 +404,96 @@ export const EXAMPLE_RULES: SiteRule[] = [
                 description: "Already-normalized search URLs stay unchanged.",
             },
         ],
-        rules: [{ kind: "appendQuery", regex: "", params: "num=100&udm=14" }],
+        rules: [
+            { kind: "appendQuery", regex: "", params: "num=100" },
+            // * Keep a user-chosen filter (`udm=` or legacy `tbm=`); Web is the fallback.
+            { kind: "checkpoint", regex: "/[?&](?:udm|tbm)=/", mode: "stop" },
+            { kind: "appendQuery", regex: "", params: "udm=14" },
+        ],
+    },
+    {
+        // * Same gate as the search group above; independent opt-in for pure URL cleanup.
+        siteRegex: "/^https?:\\/\\/(?:www\\.)?google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/search\\?/",
+        description: "Google Search: strip session and tracking parameters from result URLs",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://www.google.com/search?q=test&num=100&udm=14&sxsrf=abc&ei=def&ved=ghi",
+                testOutputUri: "https://www.google.com/search?q=test&num=100&udm=14",
+                description: "Session and click-tracking params disappear; q, num and the explicit filter stay.",
+            },
+            {
+                url: "https://www.google.de/search?q=test&num=100&tbm=isch&sca_esv=abc&hl=de&gl=de",
+                testOutputUri: "https://www.google.de/search?q=test&num=100&tbm=isch&hl=de&gl=de",
+                description: "A legacy tbm filter and language/region params stay; only tracking is removed.",
+            },
+            {
+                url: "https://www.google.com/search?q=test&num=100&udm=2&source=lnms&uact=5&oq=test",
+                testOutputUri: "https://www.google.com/search?q=test&num=100&udm=2",
+                description: "Source, click and original-query markers are removed; the explicit udm stays.",
+            },
+        ],
+        rules: [
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "sxsrf&ei&ved&uact&oq&gs_lcp&sclient&source&uule&sca_esv&souid&psi&bih&biw&dpr&client&fir&vet&cad&cd&usg&esrc&sa&gclid&fbclid&srsltid&utm_*&mstk&cvid&aqs&sourceid&rlz&pcampaignid&iflsig&fbs&ictx&cshid&gws_*&gfe_*",
+            },
+        ],
+    },
+    {
+        siteRegex:
+            "/^https?:\\/\\/(?:(?:www\\.)?google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/maps(?:[/?#]|$)|maps\\.google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/)/",
+        description: "Google Maps: strip share and session tracking from map links",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://www.google.com/maps/place/Example/@52.5,13.4,15z/data=!4m2!3m1!1s0x0:0x0?entry=ttu&g_ep=abc",
+                testOutputUri: "https://www.google.com/maps/place/Example/@52.5,13.4,15z/data=!4m2!3m1!1s0x0:0x0",
+                description: "Entry and g_ep tracking are removed; the data path is untouched.",
+            },
+            {
+                url: "https://maps.google.com/maps?q=berlin&entry=ttu&utm_source=share",
+                testOutputUri: "https://maps.google.com/maps?q=berlin",
+                description: "The legacy maps host and the entry/utm params are cleaned.",
+            },
+            {
+                url: "https://www.google.com/maps/place/X?hl=de&gclid=abc",
+                testOutputUri: "https://www.google.com/maps/place/X?hl=de",
+                description: "The language preference stays while the ad-click id is removed.",
+            },
+        ],
+        rules: [
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "entry&g_ep&gclid&fbclid&dclid&msclkid&srsltid&utm_*&_ga&_gl&mibextid",
+            },
+        ],
+    },
+    {
+        siteRegex:
+            "/^https?:\\/\\/(?:(?:www\\.)?google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?|images\\.google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?)\\/imgres\\?/",
+        description: "Google Images: open image redirect wrappers on the original image",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://www.google.com/imgres?imgurl=https%3A%2F%2Fexample.com%2Fphoto.jpg&imgrefurl=https%3A%2F%2Fexample.com%2F&tbnid=abc&vet=1",
+                testOutputUri: "https://example.com/photo.jpg",
+                description: "The encoded imgurl is decoded and replaces the wrapper; the referrer fields vanish.",
+            },
+            {
+                url: "https://images.google.de/imgres?q=test&imgurl=https%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fa%2Fab%2FExample.jpg&w=640",
+                testOutputUri: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Example.jpg",
+                description: "The localized images host is covered; the original image URL wins.",
+            },
+            {
+                url: "https://www.google.com/imgres?imgurl=data%3Aimage%2Fpng%3Bbase64%2CAAAA",
+                testOutputUri: "https://www.google.com/imgres?imgurl=data%3Aimage%2Fpng%3Bbase64%2CAAAA",
+                description: "A non-http(s) data target is rejected and the wrapper stays unchanged.",
+            },
+        ],
+        rules: [{ kind: "unwrap", regex: "/[?&]imgurl=([^&]+)/" }],
     },
     {
         siteRegex: "/^https?:\\/\\/(?:www\\.)?google\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/amp\\//",
@@ -602,6 +708,283 @@ export const EXAMPLE_RULES: SiteRule[] = [
             },
         ],
     },
+    {
+        siteRegex: "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?stackoverflow\\.com\\//",
+        description: "Stack Overflow: strip campaign and click tracking from question links",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://stackoverflow.com/questions/12345/example?utm_source=share&utm_medium=social&answertab=votes#answer-1",
+                testOutputUri: "https://stackoverflow.com/questions/12345/example?answertab=votes#answer-1",
+                description: "Campaign params are removed; the answer sort and fragment stay.",
+            },
+            {
+                url: "https://meta.stackoverflow.com/questions/1/x?noredirect=1&lq=1&rq=1",
+                testOutputUri: "https://meta.stackoverflow.com/questions/1/x",
+                description: "Login/linked-question markers are removed on the meta subdomain.",
+            },
+            {
+                url: "https://www.stackoverflow.com/questions/1/x?gclid=abc&answertab=votes",
+                testOutputUri: "https://www.stackoverflow.com/questions/1/x?answertab=votes",
+                description: "The ad-click id is removed while the answer sort survives.",
+            },
+        ],
+        rules: [
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "utm_*&_ga&_gl&gclid&fbclid&mc_cid&mc_eid&twclid&igshid&srsltid&mkt_tok&noredirect&rq&lq",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:www\\.)?duckduckgo\\.com\\/l\\/\\?/",
+        description: "DuckDuckGo: open result redirect wrappers on their target URL",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpage%3Fa%3D1&rut=abc",
+                testOutputUri: "https://example.com/page?a=1",
+                description: "The uddg target is decoded; the wrapper and rut tracking disappear.",
+            },
+            {
+                url: "https://duckduckgo.com/l/?kh=-1&uddg=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FExample",
+                testOutputUri: "https://en.wikipedia.org/wiki/Example",
+                description: "uddg is found after other query params; the target wins.",
+            },
+            {
+                url: "https://duckduckgo.com/l/?uddg=javascript%3Aalert%281%29",
+                testOutputUri: "https://duckduckgo.com/l/?uddg=javascript%3Aalert%281%29",
+                description: "A javascript target is rejected; the wrapper stays unchanged.",
+            },
+        ],
+        rules: [{ kind: "unwrap", regex: "/[?&]uddg=([^&]+)/" }],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?bing\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\/search\\?/",
+        description: "Bing: strip session and referral tracking from result URLs",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://www.bing.com/search?q=test&cvid=abc&form=QBLH&sp=-1&sc=1-2&qs=n&sk=&pq=old",
+                testOutputUri: "https://www.bing.com/search?q=test",
+                description: "Session, form and suggestion params are removed; the query stays.",
+            },
+            {
+                url: "https://cn.bing.com/search?q=test&setlang=de&cc=DE&utm_source=share",
+                testOutputUri: "https://cn.bing.com/search?q=test&setlang=de&cc=DE",
+                description: "Language/region params stay; the share tracking is removed.",
+            },
+            {
+                url: "https://www.bing.com/search?q=test&first=11&count=50",
+                testOutputUri: "https://www.bing.com/search?q=test&first=11&count=50",
+                description: "Pagination params are deliberate and stay unchanged.",
+            },
+        ],
+        rules: [
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "cvid&sk&sp&sc&qs&qp&pq&sclient&form&utm_*&gclid&fbclid&msclkid&_ga&_gl",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:r\\.)?(?:[a-z]{2,3}\\.)?search\\.yahoo\\.[a-z]{2,3}(?:\\.[a-z]{2,3})?\\//",
+        description: "Yahoo: unwrap result redirects and strip search tracking",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://r.search.yahoo.com/_ylt=abc/RV=2/RE=123/RO=10/RU=https%3a%2f%2fexample.com%2fpage%3fa%3d1/RK=2/RS=xyz",
+                testOutputUri: "https://example.com/page?a=1",
+                description: "The path RU target is decoded and replaces the wrapper.",
+            },
+            {
+                url: "https://search.yahoo.com/search?p=test&fr=yfp-t&fr2=p%3As%2Cv%3Aw%2Cm%3Asa&pvid=abc",
+                testOutputUri: "https://search.yahoo.com/search?p=test",
+                description: "Referral and page-view ids are removed; the query stays.",
+            },
+            {
+                url: "https://r.search.yahoo.com/_ylt=abc/RU=javascript%3Aalert%281%29/RK=2",
+                testOutputUri: "https://r.search.yahoo.com/_ylt=abc/RU=javascript%3Aalert%281%29/RK=2",
+                description: "A javascript target is rejected; the wrapper stays unchanged.",
+            },
+        ],
+        rules: [
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "utm_*&gclid&fbclid&msclkid&_ga&_gl&srsltid&fr&fr2&pvid&tsrc&ei&fp&guccounter&guce_referrer&guce_referrer_sig",
+            },
+            { kind: "unwrap", regex: "/(?:^|[?&/])RU=([^/&]+)/" },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:www\\.)?redd\\.it\\//",
+        description: "Reddit: expand redd.it short links to comment URLs",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://redd.it/abc123",
+                testOutputUri: "https://www.reddit.com/comments/abc123",
+                description: "A short link becomes the canonical comment URL.",
+            },
+            {
+                url: "https://redd.it/abc123?share_id=xyz&utm_source=share",
+                testOutputUri: "https://www.reddit.com/comments/abc123",
+                description: "Share params are removed after the host expansion.",
+            },
+            {
+                url: "https://redd.it/abc123#comment",
+                testOutputUri: "https://www.reddit.com/comments/abc123#comment",
+                description: "The fragment survives the expansion.",
+            },
+        ],
+        rules: [
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/(?:www\\.)?redd\\.it\\/([A-Za-z0-9]+)([/?#].*)?$/",
+                substitution: "https://www.reddit.com/comments/$1$2",
+            },
+            {
+                kind: "removeQuery",
+                regex: "",
+                keys: "share_id&correlation_id&utm_*&ref&ref_source",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:www\\.)?github\\.com\\/[^/]+\\/[^/]+\\/blob\\//",
+        description: "GitHub: open blob links on the raw file",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://github.com/owner/repo/blob/main/src/index.ts",
+                testOutputUri: "https://raw.githubusercontent.com/owner/repo/main/src/index.ts",
+                description: "The blob path moves to the raw host; the ref and path stay.",
+            },
+            {
+                url: "https://www.github.com/owner/repo/blob/v1.2.3/README.md?plain=1#L10",
+                testOutputUri: "https://raw.githubusercontent.com/owner/repo/v1.2.3/README.md",
+                description: "The plain query and line anchor are dropped for the raw file.",
+            },
+            {
+                url: "https://github.com/owner/repo/blob/main/docs/guide.md#L5",
+                testOutputUri: "https://raw.githubusercontent.com/owner/repo/main/docs/guide.md",
+                description: "Raw files do not support line anchors, so the fragment is dropped.",
+            },
+        ],
+        rules: [
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/(?:www\\.)?github\\.com\\/([^/]+)\\/([^/]+)\\/blob\\/([^?#]*[^/?#])(?:\\?[^#]*)?(?:#.*)?$/",
+                substitution: "https://raw.githubusercontent.com/$1/$2/$3",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/(?:www\\.)?github\\.com\\/[^/]+\\/[^/]+\\/tree\\//",
+        description: "GitHub: open file paths under /tree/ as /blob/ views",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://github.com/owner/repo/tree/main/src/index.ts",
+                testOutputUri: "https://github.com/owner/repo/blob/main/src/index.ts",
+                description: "A file path in a tree URL becomes a blob URL.",
+            },
+            {
+                url: "https://github.com/owner/repo/tree/main/src",
+                testOutputUri: "https://github.com/owner/repo/tree/main/src",
+                description: "A directory path has no file extension and stays unchanged.",
+            },
+            {
+                url: "https://github.com/owner/repo/tree/v1.2.3/docs/README.md#L10",
+                testOutputUri: "https://github.com/owner/repo/blob/v1.2.3/docs/README.md#L10",
+                description: "Tags and line anchors are preserved in the blob URL.",
+            },
+            {
+                url: "https://github.com/owner/repo/tree/feature/foo/src/index.ts",
+                testOutputUri: "https://github.com/owner/repo/blob/feature/foo/src/index.ts",
+                description: "A branch name with a slash works because the ref is not split.",
+            },
+            {
+                url: "https://github.com/owner/repo/tree/main/node_modules",
+                testOutputUri: "https://github.com/owner/repo/tree/main/node_modules",
+                description: "An extensionless directory stays a tree URL.",
+            },
+        ],
+        rules: [
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/(?:www\\.)?github\\.com\\/([^/]+)\\/([^/]+)\\/tree\\/([^?#]*\\.(?:md|markdown|rst|txt|adoc|json|jsonc|ya?ml|toml|ini|cfg|conf|xml|html?|css|scss|sass|less|js|mjs|cjs|ts|tsx|jsx|vue|svelte|py|rb|go|rs|java|kt|kts|swift|c|h|cc|cpp|cxx|hpp|cs|php|sh|bash|zsh|ps1|bat|sql|graphql|gql|lua|pl|r|dart|ex|exs|erl|hs|scala|clj|tex|bib|csv|tsv|svg|png|jpe?g|gif|webp|ico|pdf|zip|tar|gz|lock|env))([?#].*)?$/i",
+                substitution: "https://github.com/$1/$2/blob/$3$4",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/gist\\.github\\.com\\/[^/]+\\/[0-9a-f]+/i",
+        description: "GitHub Gist: open gist links on the raw file",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://gist.github.com/octocat/1234567890abcdef",
+                testOutputUri: "https://gist.githubusercontent.com/octocat/1234567890abcdef/raw",
+                description: "A bare gist opens the first file in raw view.",
+            },
+            {
+                url: "https://gist.github.com/octocat/1234567890abcdef/raw/setup.sh",
+                testOutputUri: "https://gist.githubusercontent.com/octocat/1234567890abcdef/raw/setup.sh",
+                description: "An existing raw file link keeps its file name.",
+            },
+            {
+                url: "https://gist.github.com/octocat/1234567890abcdef?permalink_comment_id=42",
+                testOutputUri: "https://gist.github.com/octocat/1234567890abcdef?permalink_comment_id=42",
+                description: "A comment permalink is deliberately left on the gist page.",
+            },
+        ],
+        rules: [
+            { kind: "checkpoint", regex: "/[?&]permalink_comment_id=/", mode: "stop" },
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/gist\\.github\\.com\\/([^/]+)\\/([0-9a-f]+)\\/raw\\/(.+)$/i",
+                substitution: "https://gist.githubusercontent.com/$1/$2/raw/$3",
+            },
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/gist\\.github\\.com\\/([^/]+)\\/([0-9a-f]+)\\/?(?:[?#].*)?$/i",
+                substitution: "https://gist.githubusercontent.com/$1/$2/raw",
+            },
+        ],
+    },
+    {
+        siteRegex: "/^https?:\\/\\/commons\\.wikimedia\\.org\\/wiki\\/(?:File|Image|Datei):/i",
+        description: "Wikimedia Commons: open file pages on the original file",
+        disabled: true,
+        previewEntries: [
+            {
+                url: "https://commons.wikimedia.org/wiki/File:Example.jpg",
+                testOutputUri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Example.jpg",
+                description: "The file page becomes the original-file redirect.",
+            },
+            {
+                url: "https://commons.wikimedia.org/wiki/File:Example_image.png#filehistory",
+                testOutputUri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Example_image.png#filehistory",
+                description: "The file name and fragment survive the rewrite.",
+            },
+            {
+                url: "https://commons.wikimedia.org/wiki/Category:Images",
+                testOutputUri: "https://commons.wikimedia.org/wiki/Category:Images",
+                description: "Non-file namespaces stay untouched.",
+            },
+        ],
+        rules: [
+            {
+                kind: "replace",
+                regex: "/^https?:\\/\\/commons\\.wikimedia\\.org\\/wiki\\/(?:File|Image|Datei):/i",
+                substitution: "https://commons.wikimedia.org/wiki/Special:Redirect/file/",
+            },
+        ],
+    },
 ];
 
 /**
@@ -730,6 +1113,13 @@ export function normalizeRule(raw: unknown): UrlRule | null {
             kind: "checkpoint",
             regex: record.regex,
             mode,
+        };
+    }
+    if (record.kind === "unwrap") {
+        if (typeof record.regex !== "string") return null;
+        return {
+            kind: "unwrap",
+            regex: record.regex,
         };
     }
     return null;

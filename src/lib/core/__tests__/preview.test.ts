@@ -109,6 +109,7 @@ describe("ruleLabel", () => {
         expect(ruleLabel({ kind: "replace", regex: "/old/", substitution: "new" })).toBe("/old/");
         expect(ruleLabel({ kind: "appendQuery", regex: "", params: "a=1" })).toBe("a=1");
         expect(ruleLabel({ kind: "removeQuery", regex: "", keys: "utm_*" })).toBe("utm_*");
+        expect(ruleLabel({ kind: "unwrap", regex: "/[?&]uddg=([^&]+)/" })).toBe("/[?&]uddg=([^&]+)/");
     });
 });
 
@@ -685,5 +686,32 @@ describe("diffSpans", () => {
         const { sourceSpans, targetSpans } = diffSpans("", "https://example.de/b");
         expect(sourceSpans).toEqual([]);
         expect(diffText(targetSpans, "insertion")).toBe("https://example.de/b");
+    });
+});
+
+describe("unwrap preview", () => {
+    const site: SiteRule = {
+        siteRegex: "/^https?:\\/\\/x\\.test\\//",
+        rules: [{ kind: "unwrap", regex: "/[?&]u=([^&]+)/" }],
+    };
+
+    it("shows the decoded target as the after URL and marks the step applied", () => {
+        const result = previewGroup("https://x.test/?u=https%3A%2F%2Fexample.com%2Fa", site);
+        expect(result.steps[0]).toMatchObject({ status: "applied", reason: "applied" });
+        expect(result.finalUrl).toBe("https://example.com/a");
+    });
+
+    it("marks a rejected non-http(s) target as unchanged", () => {
+        const url = "https://x.test/?u=javascript%3Aalert%281%29";
+        const result = previewGroup(url, site);
+        expect(result.steps[0]).toMatchObject({ status: "skipped", reason: "unchanged" });
+        expect(result.finalUrl).toBe(url);
+    });
+
+    it("marks a non-matching wrapper as no-match", () => {
+        const url = "https://x.test/page";
+        const result = previewGroup(url, site);
+        expect(result.steps[0]).toMatchObject({ status: "skipped", reason: "no-match" });
+        expect(result.finalUrl).toBe(url);
     });
 });

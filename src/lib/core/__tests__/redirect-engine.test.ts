@@ -583,3 +583,59 @@ describe("removeQuery rules", () => {
         expect(compiled[0].rules[0].kind).toBe("removeQuery");
     });
 });
+
+describe("unwrap rules", () => {
+    const group: SiteRule = {
+        siteRegex: "/^https?:\\/\\/duckduckgo\\.com\\/l\\//",
+        rules: [{ kind: "unwrap", regex: "/[?&]uddg=([^&]+)/" }],
+    };
+
+    it("decodes the captured target and replaces the wrapper", () => {
+        expect(run("https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fa%3Fb%3D1&rut=x", [group])).toBe(
+            "https://example.com/a?b=1",
+        );
+    });
+
+    it("leaves the url unchanged when the wrapper does not match", () => {
+        const url = "https://duckduckgo.com/l/?rut=x";
+        expect(run(url, [group])).toBe(url);
+    });
+
+    it("rejects non-http(s) targets", () => {
+        const url = "https://duckduckgo.com/l/?uddg=javascript%3Aalert%281%29";
+        expect(run(url, [group])).toBe(url);
+    });
+
+    it("decodes the whole match when the regex has no capture group", () => {
+        const whole: SiteRule = {
+            siteRegex: "/^https?:\\/\\/x\\.test\\//",
+            rules: [{ kind: "unwrap", regex: "/https%3A%2F%2Fexample\\.com%2F/" }],
+        };
+        expect(run("https://x.test/?u=https%3A%2F%2Fexample.com%2F", [whole])).toBe("https://example.com/");
+    });
+
+    it("records an applied step for a decoded target", () => {
+        const compiled = compileRules([group]);
+        const execution = executeCompiledGroup(
+            compiled[0],
+            "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2F",
+        );
+        expect(execution.steps[0]).toMatchObject({ reason: "applied", changed: true });
+        expect(execution.finalUrl).toBe("https://example.com/");
+    });
+
+    it("drops unwrap rules with an empty or invalid regex", () => {
+        const compiled = compileRules([
+            {
+                siteRegex: "/ok\\.test/",
+                rules: [
+                    { kind: "unwrap", regex: "" },
+                    { kind: "unwrap", regex: "/([unclosed/" },
+                    { kind: "unwrap", regex: "/u=([^&]+)/" },
+                ],
+            },
+        ]);
+        expect(compiled[0].rules).toHaveLength(1);
+        expect(compiled[0].rules[0].kind).toBe("unwrap");
+    });
+});

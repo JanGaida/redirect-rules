@@ -76,6 +76,17 @@ describe("rule-kind session drafts", () => {
         expect(JSON.parse(JSON.stringify(rule))).toEqual({ kind: "replace", regex: "/old/", substitution: "new" });
     });
 
+    it("switches to unwrap without a distinct field and carries the regex", () => {
+        const rule = replaceRule();
+        switchRuleKind(rule, "unwrap");
+        expect(rule).toEqual({ kind: "unwrap", regex: "/old/" });
+        if (rule.kind === "unwrap") rule.regex = "/u=([^&]+)/";
+        switchRuleKind(rule, "replace");
+        expect(rule).toEqual({ kind: "replace", regex: "/u=([^&]+)/", substitution: "new" });
+        switchRuleKind(rule, "unwrap");
+        expect(rule).toEqual({ kind: "unwrap", regex: "/u=([^&]+)/" });
+    });
+
     it("does not leak drafts into identical rules or clones", () => {
         const rule = replaceRule();
         switchRuleKind(rule, "appendQuery");
