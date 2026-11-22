@@ -1,6 +1,6 @@
 # ADR 0008: Release-please automation contract — bump target, PR-update rule, in-workflow assets
 
-- Status: accepted (2026-10-25, adapted from the youtube-ui-tweaks pipeline; amended 2026-11-07 — the generic vite.config.ts marker updater was dropped and the first release is bootstrapped as `1.0.0`; amended 2026-11-09 — release-please-action v5, a PAT-gated release PR, `package-lock.json` version mirrors, and a manual `--clobber` asset rerun)
+- Status: accepted (2026-10-25, adapted from the youtube-ui-tweaks pipeline; amended 2026-11-07 — the generic vite.config.ts marker updater was dropped and the first release is bootstrapped as `1.0.0`; amended 2026-11-09 — release-please-action v5, a PAT-gated release PR, `package-lock.json` version mirrors, and a manual `--clobber` asset rerun; amended 2026-11-22 — the second asset job publishes coverage badge data, see ADR 0047)
 - Deciders: project owner
 - Applies to: `release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release-please.yml`, `scripts/check-release-config.mjs`, `package-lock.json`, `.prettierignore`
 
@@ -44,7 +44,9 @@ surfaced four non-obvious engine behaviors:
    on the tag). It is re-runnable for an existing tag: `workflow_dispatch` with the optional
    `tag` input checks out that tag, builds the artifact, asserts the built `// @version` equals
    the tag minus `v`, and uploads with `--clobber` so a retry is idempotent. There is no separate
-   `on: release` workflow.
+   `on: release` workflow. A second job in the same workflow, `coverage-asset`, publishes the
+   coverage summary JSON as a further release asset ([ADR 0047](0047-coverage-badge-release-asset.md));
+   it is gated separately and leaves this userscript retry path untouched.
 5. **Release-please-owned files are excluded from the format gate**: `CHANGELOG.md` and
    `.release-please-manifest.json` are listed in `.prettierignore` — their formatting follows
    the release-please writer, not Prettier (`tabWidth: 4`).
@@ -91,3 +93,5 @@ matters for a pending release, it must change the changelog.
 - Format-gate exclusions: `.prettierignore` (`CHANGELOG.md`, `.release-please-manifest.json`)
 - Follow-up ADR: [ADR 0009](0009-squash-merge-and-pr-title-contract.md) — the merge strategy
   feeding this machinery
+- Related ADR: [ADR 0047](0047-coverage-badge-release-asset.md) — the coverage-asset job in
+  the same workflow

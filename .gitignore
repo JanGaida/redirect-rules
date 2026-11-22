@@ -52,3 +52,6 @@ tsconfig.node.tsbuildinfo
 playwright-report/
 test-results/
 .playwright/
+
+# Coverage artifacts (Vitest, generated)
+coverage/

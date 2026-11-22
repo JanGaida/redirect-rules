@@ -154,6 +154,28 @@ flowchart TB
 - The former `test.fixme` was not a guard defect: the shared seed's two loop
   rules cancelled inside one pass, so no redirect ever occurred.
 
+## Coverage & Badge
+
+- **Scope**: `src/**/*.{ts,svelte}` — every TypeScript module plus every Svelte
+  component and tab, minus tests, ambient `.d.ts` files, and the generated
+  `i18n.keys.ts`. No Vitest test renders a component, so all components sit at 0 %
+  by design: the aggregate is a gap signal, not a release gate, and Playwright
+  remains their behavioral coverage.
+- **Gate**: CI runs `npm run test:coverage` in the `gate` job. There is no
+  `coverage.thresholds` value — a new untested component lowers the percentage and
+  must not block a PR.
+- **Badge data**: the `coverage-asset` release job runs `npm run test:coverage` on
+  the release tag and attaches the Vitest json-summary as `coverage-summary.json`.
+  The README chip reads `total.lines.pct` from
+  `https://github.com/JanGaida/redirect-rules/releases/latest/download/coverage-summary.json`
+  with a shields.io dynamic JSON badge (`query=$.total.lines.pct`). The endpoint
+  badge is not used: shields blocks `github.com` URLs for that service.
+- **Freshness**: the badge updates per release, not per merge. No third-party
+  coverage account exists; only the release asset crosses the repository boundary.
+- **Local**: `npm run test:coverage` (or the VS Code task "Test Coverage") writes the
+  HTML report and the summary into the gitignored coverage directory; the same
+  command runs in the CI gate and in the release job.
+
 ## Manual (not automated)
 
 - Tampermonkey install + real-world rule sets + the dashboard's remaining
@@ -171,7 +193,8 @@ flowchart TB
 - Integration specs: `src/lib/core/__tests__/watcher.test.ts`, `src/lib/core/__tests__/stats-drain.test.ts`, `src/lib/core/__tests__/settings-store.test.ts`, `src/lib/gui/__tests__/autosave.test.ts`
 - E2E: `e2e/tests/redirect-on-load.spec.ts`, `e2e/tests/no-match.spec.ts`, `e2e/tests/spa-navigation.spec.ts`, `e2e/tests/append-query.spec.ts`, `e2e/tests/loop-guard.spec.ts`, `e2e/tests/dashboard-smoke.spec.ts`, `e2e/tests/group-enable.spec.ts`, `e2e/tests/toast-undo.spec.ts`, `e2e/tests/performance-mode.spec.ts`
 - E2E helpers: `e2e/helpers/fixture-server.ts`, `e2e/helpers/gm-polyfill.ts`, `e2e/helpers/userscript.ts`, `e2e/helpers/dashboard.ts`
-- CI wiring: `.github/workflows/ci.yml`
-- Decisions: `docs/adr/0004-synthetic-e2e-in-ci.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`
+- CI wiring: `.github/workflows/ci.yml`, `.github/workflows/release-please.yml`
+- Coverage: `vitest.config.ts`
+- Decisions: `docs/adr/0004-synthetic-e2e-in-ci.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`, `docs/adr/0047-coverage-badge-release-asset.md`
 
-Verified: 2026-11-09 — against `e2e/` (RR_FIXTURE_PORT, returned globalSetup teardown, jsDelivr abort, remaining fixed sleeps) and the current spec inventory.
+Verified: 2026-11-22 — against the Vitest coverage config, the coverage-asset release job, and the current unit-test inventory (Svelte components still unit-untested).
