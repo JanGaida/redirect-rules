@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/github/package-json/v/JanGaida/redirect-rules)](https://github.com/JanGaida/redirect-rules/releases)
 [![CI](https://github.com/JanGaida/redirect-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/JanGaida/redirect-rules/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=coverage&color=blue&cacheSeconds=3600)](https://github.com/JanGaida/redirect-rules/releases)
+[![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=coverage&color=blue)](https://github.com/JanGaida/redirect-rules/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 </div>
