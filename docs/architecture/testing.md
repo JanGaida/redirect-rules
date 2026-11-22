@@ -172,6 +172,9 @@ flowchart TB
   badge is not used: shields blocks `github.com` URLs for that service.
 - **Freshness**: the badge updates per release, not per merge. No third-party
   coverage account exists; only the release asset crosses the repository boundary.
+  Shields and GitHub Camo cache the image for the badge cache window (300 s by
+  default), so a new release shows up within minutes — a longer `cacheSeconds` would
+  also pin an early "not found" for that window.
 - **Local**: `npm run test:coverage` (or the VS Code task "Test Coverage") writes the
   HTML report and the summary into the gitignored coverage directory; the same
   command runs in the CI gate and in the release job.
