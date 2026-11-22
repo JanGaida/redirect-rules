@@ -18,5 +18,8 @@ vitest.config.d.ts
 test-results/
 playwright-report/
 .playwright/
+
+# Coverage artifacts (generated, gitignored)
+coverage/
 CHANGELOG.md
 .release-please-manifest.json

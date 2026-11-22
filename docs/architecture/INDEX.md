@@ -79,6 +79,7 @@ The table is generated — never edit it by hand:
 | [0044](../adr/0044-remove-query-rule-kind.md)                   | `removeQuery` rule kind for key-based query removal                                   | accepted | 2026-11-09 |
 | [0045](../adr/0045-mobile-layout-bottom-nav-and-pane-switch.md) | Mobile layout — bottom navigation and phone pane switch                               | amended  | 2026-11-11 |
 | [0046](../adr/0046-unwrap-rule-kind.md)                         | `unwrap` rule kind for percent-decoded redirect wrappers                              | accepted | 2026-11-13 |
+| [0047](../adr/0047-coverage-badge-release-asset.md)             | Coverage badge data as a release asset — no third-party coverage service              | accepted | 2026-11-22 |
 
 <!-- ADR-INDEX:END -->
 

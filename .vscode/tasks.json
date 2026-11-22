@@ -143,6 +143,18 @@
         },
         {
             "type": "npm",
+            "script": "test:coverage",
+            "detail": "Vitest + line coverage (text/json-summary/html) -> coverage/ (gitignored). The release job uploads coverage-summary.json as the README badge data; open coverage/index.html for the HTML report.",
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Test Coverage"
+        },
+        {
+            "type": "npm",
             "script": "test:e2e",
             "detail": "Playwright Firefox against locally hosted synthetic fixtures (localhost:4184, never the live web), single worker, ~5s.",
             "dependsOn": ["Build Prod"],
@@ -253,10 +265,10 @@
         },
         {
             "label": "Quality Gate",
-            "detail": "Composite, mirrors CI.yml gate order: types -> unit -> comments -> css -> docs -> release -> format -> prod build (fail-fast).",
+            "detail": "Composite, mirrors CI.yml gate order: types -> coverage -> comments -> css -> docs -> release -> format -> prod build (fail-fast).",
             "dependsOn": [
                 "Check Types",
-                "Test Unit",
+                "Test Coverage",
                 "Check Comments",
                 "Check CSS",
                 "Check Docs",

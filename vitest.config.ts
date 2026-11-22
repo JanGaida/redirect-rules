@@ -18,5 +18,12 @@ export default defineConfig({
     test: {
         environment: "node",
         include: ["src/**/*.test.ts"],
+        coverage: {
+            provider: "v8",
+            reporter: ["text", "json-summary", "html"],
+            reportsDirectory: "coverage",
+            include: ["src/**/*.{ts,svelte}"],
+            exclude: ["src/**/__tests__/**", "src/**/*.d.ts", "src/lib/gui/i18n.keys.ts"],
+        },
     },
 });

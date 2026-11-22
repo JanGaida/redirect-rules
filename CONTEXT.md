@@ -27,7 +27,7 @@ vite-plugin-monkey** into a single `.user.js`.
 | CSS gate           | `npm run css:check` — `scripts/check-css.mjs` (declared-but-unreferenced classes, keyframes, `--rr-*` tokens); `--strict` fails on findings                                                                       |
 | Release gate       | `npm run release:check` — `scripts/check-release-config.mjs` (release-please wiring + version-mirror drift)                                                                                                       |
 | Format             | Prettier (4-space, double-quote) — `npm run format` / `format:check`                                                                                                                                              |
-| Test               | Vitest 4 (`node` + `jsdom` envs) — `npm run test`                                                                                                                                                                 |
+| Test               | Vitest 4 (`node` + `jsdom` envs) — `npm run test`; line coverage: `npm run test:coverage`                                                                                                                         |
 | E2E                | Playwright (Firefox) against committed synthetic fixtures — `npm run test:e2e`                                                                                                                                    |
 
 ### Commands
@@ -36,6 +36,7 @@ vite-plugin-monkey** into a single `.user.js`.
 npm install          # install deps
 npm run check        # svelte-check + tsc — typecheck gate (must be green before commit; includes tests)
 npm test             # vitest run — engine, append-query, settings, watcher, store + ported legacy corpus
+npm run test:coverage # vitest + line coverage → coverage/ (HTML report + json-summary; gitignored)
 npm run test:e2e     # playwright test — effective URL behavior against local fixtures (needs `npm run build`)
 npm run screenshots  # playwright screenshot config — regenerate assets/screenshots/*.png for the README (needs `npm run build`)
 npm run docs:check   # architecture-docs gate (sections, links, generated ADR table, footers)
@@ -266,6 +267,13 @@ type SiteRule = {
           `validation.test.ts`, `autosave.test.ts`, `settings-transfer.test.ts`).
 - **Integration (jsdom)**: watcher loop-guard (injectable runtime) + stats sink
   recording/abort split, store CRUD.
+- **Coverage**: `npm run test:coverage` runs Vitest v8 over `src/**/*.{ts,svelte}`
+  (tests, ambient types, generated keys excluded) and writes the HTML report plus
+  the json-summary into the gitignored coverage directory. CI measures the same
+  scope in the gate without a threshold; components are unit-untested (0 %, E2E
+  covers them), so the aggregate is a gap signal. The release job attaches the
+  summary as a release asset, and the README chip reads its `total.lines.pct`
+  through a shields.io dynamic JSON badge (ADR 0047).
 - **E2E (Firefox, in CI)**: real navigations via CONTEXT-scoped addInitScript
   injection against committed synthetic fixtures (ADR 0004); `dashboard-smoke.spec.ts`
   drives the REAL takeover tab (context page event) across all three tabs + the
@@ -286,11 +294,14 @@ type SiteRule = {
 - `feat`/`fix` commits update the pending release-please PR; merging it tags the
   release, publishes the GitHub Release, and attaches `dist/redirect-rules.user.js`
   (ADR 0008 — the `updateURL` target Tampermonkey auto-updates from).
+- The separate `coverage-asset` job attaches `coverage-summary.json` (Vitest line
+  coverage) to the same release; the README chip reads `total.lines.pct` from it
+  through a shields.io dynamic JSON badge (ADR 0047).
 - `.release-please-manifest.json` is the version source of truth; tags are `vX.Y.Z`
   (`include-component-in-tag: false`).
 - Distribution is GitHub Releases only. The Terser-minified prod build is intentional;
   Greasy Fork is not supported because its code rules forbid minified bundles.
-- CI (`.github/workflows/ci.yml`): `gate` (check/test/comments:check/css:check/docs:check/release:check/format:check/build),
+- CI (`.github/workflows/ci.yml`): `gate` (check/test:coverage/comments:check/css:check/docs:check/release:check/format:check/build),
   `e2e` (build → Playwright Firefox → test:e2e), and `secrets` (gitleaks over full history).
 
 ## License

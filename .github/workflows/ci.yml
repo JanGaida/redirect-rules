@@ -42,7 +42,7 @@ jobs:
       # LABEL: the gates (order = fail-fast: cheapest first)
       - run: npm ci
       - run: npm run check
-      - run: npm test
+      - run: npm run test:coverage
       - run: npm run comments:check -- --strict
       - run: npm run css:check -- --strict
       - run: npm run docs:check
