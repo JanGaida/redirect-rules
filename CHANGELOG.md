@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/JanGaida/redirect-rules/compare/v1.2.0...v1.3.0) (2026-11-22)
+
+
+### Features
+
+* **coverage:** publish unit line coverage badge via release asset ([#18](https://github.com/JanGaida/redirect-rules/issues/18)) ([9d96ced](https://github.com/JanGaida/redirect-rules/commit/9d96ced87683d91c021c18196981ce3fb89c81b6))
+
 ## [1.2.0](https://github.com/JanGaida/redirect-rules/compare/v1.1.1...v1.2.0) (2026-11-13)
 
 
