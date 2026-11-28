@@ -2,10 +2,10 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/github/package-json/v/JanGaida/redirect-rules)](https://github.com/JanGaida/redirect-rules/releases)
+[![Version](https://img.shields.io/github/package-json/v/JanGaida/redirect-rules?label=Version)](https://github.com/JanGaida/redirect-rules/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/JanGaida/redirect-rules/ci.yml?label=CI&branch=main)](https://github.com/JanGaida/redirect-rules/actions/workflows/ci.yml)
-[![Unit coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=unit%20coverage&color=blue)](https://github.com/JanGaida/redirect-rules/releases)
+[![Unit Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=Unit%20Coverage&color=blue)](https://github.com/JanGaida/redirect-rules/releases)
 [![E2E (Firefox)](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FJanGaida%2Fredirect-rules%2Fbadges%2Fe2e-firefox.json)](https://github.com/JanGaida/redirect-rules/actions/workflows/e2e-firefox.yml)
 [![E2E (Chromium)](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FJanGaida%2Fredirect-rules%2Fbadges%2Fe2e-chromium.json)](https://github.com/JanGaida/redirect-rules/actions/workflows/e2e-chromium.yml)
 
