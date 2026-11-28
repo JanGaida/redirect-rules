@@ -1,8 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: e2e-badge — Playwright JSON -> shields endpoint badge
 // ─────────────────────────────────────────────────────────────────────────────
-// * Thresholds: 100 % green, >= 80 % orange, else red (owner contract).
-// * Missing or corrupt report -> 0/0 red: a crashed run must never look green.
+// * Thresholds: 100 % success, >= 80 % warning, else failure (owner contract).
+// * Palette: shields tokens — brightgreen / orange / red — so shields resolves the
+// * same values as the CI workflow-status chip; no hex to drift out of sync.
+// * Missing or corrupt report -> 0/0 failure: a crashed run must never look green.
 // * Usage: node scripts/e2e-badge.mjs <playwright-json> <label> <out-file>
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -35,7 +37,7 @@ const stats = readStats(reportPath);
 const passed = count(stats.expected) + count(stats.flaky);
 const total = passed + count(stats.unexpected) + count(stats.skipped);
 const ratio = total === 0 ? 0 : passed / total;
-const color = total > 0 && passed === total ? "green" : ratio >= 0.8 ? "orange" : "red";
+const color = total > 0 && passed === total ? "brightgreen" : ratio >= 0.8 ? "orange" : "red";
 
 const badge = { schemaVersion: 1, label, message: `${passed}/${total}`, color };
 mkdirSync(dirname(outPath), { recursive: true });
