@@ -8,9 +8,9 @@
 # The same asset job can be re-run manually for an existing tag.
 #
 # The separate coverage-asset job publishes the Vitest coverage summary for the
-# README badge (ADR 0047): line coverage -> json-summary release asset -> a
-# shields.io dynamic JSON badge. It stays out of the userscript asset job so a
-# coverage failure never blocks the .user.js upload or its manual retry.
+# README badge (ADR 0047): TypeScript unit line coverage -> json-summary release
+# asset -> a shields.io dynamic JSON badge. It stays out of the userscript asset
+# job so a coverage failure never blocks the .user.js upload or its manual retry.
 #
 # ! The asset build MUST live in THIS workflow: release-please publishes the
 #   Release via GITHUB_TOKEN, and events triggered by GITHUB_TOKEN deliberately

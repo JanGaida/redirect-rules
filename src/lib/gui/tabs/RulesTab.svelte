@@ -142,6 +142,24 @@
         });
     });
 
+    // * The `<details>` elements own their open state; `openSite` mirrors it. Only
+    //   STATE changes write back to the DOM, so unrelated re-renders can never
+    //   fight a user toggle that is still queued (Chromium fires `toggle` async).
+    // * `generation` also re-applies: a whole-tree swap re-creates the elements
+    //   (fresh, closed) while `openSite` may be unchanged.
+    let syncedOpenSite: number | null = null;
+    let syncedGeneration = -1;
+    $effect(() => {
+        const target = openSite;
+        const generation = store.generation;
+        if (target === syncedOpenSite && generation === syncedGeneration) return;
+        syncedOpenSite = target;
+        syncedGeneration = generation;
+        for (const details of masterEl?.querySelectorAll<HTMLDetailsElement>(":scope > details.rr-master-site") ?? []) {
+            details.open = Number(details.dataset.siteIndex) === target;
+        }
+    });
+
     // * Module scope: survives tab switches (remounts) so a request id is
     //   consumed exactly ONCE — otherwise every remount would prefill again.
     let lastConsumedRequest = -1;
@@ -546,10 +564,14 @@
      * the app mirrors it (single-open). Opening does NOT select a rule: the
      * rule fold is an explicit second step. Closing drops any selection inside
      * that group.
+     *
+     * ! The element owns the open state. `openSite` mirrors it from the native
+     *   toggle, and STATE changes are pushed back imperatively (see the sync
+     *   effect) — a reactive `open` attribute would re-close/re-open a group
+     *   inside Chromium's queued toggle task window.
      */
-    function onSiteToggle(si: number, event: Event): void {
-        const el = event.currentTarget as HTMLDetailsElement;
-        if (el.open) {
+    function applySiteToggle(si: number, open: boolean): void {
+        if (open) {
             log.debug("site rule unfolded", { siteIndex: si });
             openSite = si;
             if (selection && selection.siteIndex !== si) {
@@ -564,6 +586,11 @@
             selection = null;
             rememberSelection(null);
         }
+    }
+
+    /** Native `toggle` fallback — covers programmatic open/close changes. */
+    function onSiteToggle(si: number, event: Event): void {
+        applySiteToggle(si, (event.currentTarget as HTMLDetailsElement).open);
     }
 
     // ── Explorer accordion (single-open) ─────────────────────────────────────
@@ -852,7 +879,7 @@
                 class:rr-site-disabled={site.disabled === true}
                 class:rr-autosave-paused={site.disabled !== true && isSiteIncomplete(site)}
                 data-disabled={site.disabled === true}
-                open={openSite === si}
+                data-site-index={si}
                 ontoggle={(e) => onSiteToggle(si, e)}
             >
                 <summary

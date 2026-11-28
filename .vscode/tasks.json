@@ -168,6 +168,19 @@
         },
         {
             "type": "npm",
+            "script": "test:e2e:chromium",
+            "detail": "Playwright Chromium against the same local synthetic fixtures (localhost:4184), single worker, same full suite as Firefox.",
+            "dependsOn": ["Build Prod"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "label": "Test E2E Chromium"
+        },
+        {
+            "type": "npm",
             "script": "test:e2e:ui",
             "detail": "Playwright interactive UI mode against the built artifact.",
             "dependsOn": ["Build Prod"],

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { openDashboardTab } from "../helpers/dashboard";
+import { openDashboardTab, unfoldMasterRule, unfoldMasterSiteGroup } from "../helpers/dashboard";
 import { injectUserscript, openFixtureWithUserscript, SEEDED_SETTINGS } from "../helpers/userscript";
 
 /** Border-box width of a row-chrome element. */
@@ -497,7 +497,7 @@ test("the tabs switch and the autosave round-trip persists the settings", async 
     const newSite = dashboard.locator(".rr-master-site").nth(1);
     // * SINGLE-OPEN accordion: groups render FOLDED — unfold before touching
     //   its body (the site-row input + the add-rule action live inside details).
-    await newSite.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(newSite);
     await newSite.getByRole("textbox", { name: "Site", exact: true }).fill("/e2e\\.test/");
     await newSite.getByRole("button", { name: "Add rule" }).click();
     // * Add rule opens the new rule inline — no extra click.
@@ -528,6 +528,31 @@ test("the tabs switch and the autosave round-trip persists the settings", async 
         return raw === null ? null : (JSON.parse(raw) as { rules: Array<{ siteRegex: string }> });
     });
     expect(persisted?.rules[1]?.siteRegex).toBe("/e2e\\.test/");
+});
+
+test("a gate edit inside the toggle task window keeps the newly opened group open", async ({ page }) => {
+    await openFixtureWithUserscript(page, "/");
+    const dashboard = await openDashboardTab(page);
+    await dashboard.getByRole("tab", { name: "Rules" }).click();
+    await dashboard.getByRole("button", { name: "Add site rule" }).click();
+    await expect(dashboard.locator(".rr-master > details.rr-master-site")).toHaveCount(2);
+
+    // * Chromium queues the native <details> toggle task. Clicking the summary and
+    // * editing the gate in the SAME task used to race that task: the controlled
+    // * `open` binding re-closed the group and the pending toggle never reached the
+    // * open branch — the editor lost its "Add rule" action.
+    await dashboard.evaluate(() => {
+        const details = document.querySelectorAll<HTMLDetailsElement>(".rr-master > details.rr-master-site")[1];
+        (details.querySelector("summary") as HTMLElement).click();
+        const input = details.querySelector<HTMLInputElement>('input[aria-label="Site"]');
+        input!.value = "/race\\.test/";
+        input!.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const newSite = dashboard.locator(".rr-master > details.rr-master-site").nth(1);
+    await expect(newSite).toHaveAttribute("open", "");
+    await expect(newSite.getByRole("textbox", { name: "Site", exact: true })).toHaveValue("/race\\.test/");
+    await expect(newSite.getByRole("button", { name: "Add rule" })).toBeVisible();
 });
 
 test("a card reset shows an undo toast and restores the previous values", async ({ page }) => {
@@ -593,7 +618,7 @@ test("the close button flushes the pending autosave synchronously", async ({ pag
     await expect(pill).toHaveAttribute("data-speed", "slow");
 
     const seeded = dashboard.locator(".rr-master-site").first();
-    await seeded.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(seeded);
     await seeded.getByRole("textbox", { name: "Site", exact: true }).fill("/localhost-edited/");
     await expect(dashboard.locator(".rr-status-pending")).toContainText("saving 1 change");
 
@@ -626,7 +651,7 @@ test("two dashboards stay in sync (remote reload while clean)", async ({ page })
     // * A: add a valid group + rule (the same round-trip shape as above).
     await dashboardA.getByRole("button", { name: "Add site rule" }).click();
     const newSite = dashboardA.locator(".rr-master-site").nth(1);
-    await newSite.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(newSite);
     await newSite.getByRole("textbox", { name: "Site", exact: true }).fill("/sync\\.test/");
     await newSite.getByRole("button", { name: "Add rule" }).click();
     // * Add rule opens the new rule inline.
@@ -651,7 +676,7 @@ test("the undo button restores the dashboard's opening state", async ({ page }) 
     // * Change the seeded gate + let the AUTOSAVE commit — the undo must stay
     //   available AFTER a commit (it IS the safety net for automatic saves).
     const seeded = dashboard.locator(".rr-master-site").first();
-    await seeded.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(seeded);
     await seeded.getByRole("textbox", { name: "Site", exact: true }).fill("/localhost-edited/");
     await expect(dashboard.getByRole("button", { name: "Undo" })).toBeEnabled();
     await expect
@@ -683,7 +708,7 @@ test("the row grip reorders rules by drag and Arrow keys", async ({ page }) => {
     const site = dashboard.locator(".rr-master-site").first();
     // * One site in the seed → the site row has no grip.
     await expect(site.locator("> .rr-group-summary > .rr-drag-handle")).toHaveCount(0);
-    await site.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
 
     const rules = site.locator(".rr-master-rule");
     await expect(rules.first()).toBeVisible();
@@ -718,7 +743,7 @@ test("the row grip reorders rules with a touch pointer", async ({ page }) => {
     const dashboard = await openDashboardTab(page);
 
     const site = dashboard.locator(".rr-master-site").first();
-    await site.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
     const rules = site.locator(".rr-master-rule");
     await expect(rules.first()).toBeVisible();
     const labels = () => site.locator(".rr-master-rule-label").allTextContents();
@@ -1042,7 +1067,7 @@ test("a site-gate manual opens only its own group's popover", async ({ page }) =
     await expect(groups).toHaveCount(3);
 
     const target = groups.nth(1);
-    await target.locator("> .rr-group-summary").click();
+    await unfoldMasterSiteGroup(target);
     const trigger = target.locator(".rr-site-gate").getByRole("button", { name: "Regex manual" });
     const pop = target.locator(".rr-info-pop--manual");
     await trigger.click();
@@ -1079,7 +1104,7 @@ test("re-clicking a reference trigger keeps its popover open", async ({ page }) 
     await page.goto("/");
     const dashboard = await openDashboardTab(page);
     const site = dashboard.locator(".rr-master > details.rr-master-site").first();
-    await site.locator("> .rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
     const siteGate = site.locator(".rr-site-gate");
     const trigger = siteGate.getByRole("button", { name: "Regex manual" });
     const pop = siteGate.locator(".rr-info-pop--manual");
@@ -1118,7 +1143,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     const dashboard = await openDashboardTab(page);
 
     const site = dashboard.locator(".rr-master > details.rr-master-site").first();
-    await site.locator("> .rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
 
     // * Site gate: escape toggle first, manual trigger last, both in the field.
     const siteGate = site.locator(".rr-site-gate");
@@ -1141,7 +1166,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     await expect(siteManualTrigger).toBeFocused();
 
     const rules = site.locator(".rr-master-rule");
-    await rules.first().locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(rules.first());
 
     const fields = rules.first().locator(".rr-ed-fields");
     const tokenTrigger = fields.getByRole("button", { name: "Token reference" });
@@ -1253,7 +1278,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     await dashboard.setViewportSize({ width: 1280, height: 720 });
 
     // * appendQuery swaps the token set + title live.
-    await rules.nth(1).locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(rules.nth(1));
     const paramsFields = rules.nth(1).locator(".rr-ed-fields");
     const paramsTrigger = paramsFields.getByRole("button", { name: "Token reference" });
     await paramsTrigger.click();
@@ -1262,7 +1287,7 @@ test("the field reference triggers anchor top-layer popovers for tokens and the 
     await dashboard.keyboard.press("Escape");
 
     // * Checkpoint: no token trigger, but the manual trigger stays; no disclosure.
-    await rules.nth(2).locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(rules.nth(2));
     const checkpointFields = rules.nth(2).locator(".rr-ed-fields");
     await expect(checkpointFields.getByRole("button", { name: "Token reference" })).toHaveCount(0);
     await expect(checkpointFields.getByRole("button", { name: "Regex manual" })).toHaveCount(1);
@@ -1284,13 +1309,15 @@ test("the popover header is a grab handle and keeps the close click", async ({ p
     await page.goto("/");
     const dashboard = await openDashboardTab(page);
     const site = dashboard.locator(".rr-master > details.rr-master-site").first();
-    await site.locator("> .rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
     const rule = site.locator(".rr-master-rule").first();
-    await rule.locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(rule);
     const trigger = rule.locator(".rr-ed-fields").getByRole("button", { name: "Regex manual" });
     const pop = rule.locator(".rr-info-pop--manual");
     await trigger.click();
     await expect(pop).toBeVisible();
+    // * The entry transition shifts the measured box; settle before geometry.
+    await settlePopover(pop);
 
     // * Header = card-head band: title only; the manual carries no lead anymore.
     await expect(pop.locator(".rr-info-pop-head .rr-info-pop-lead")).toHaveCount(0);
@@ -1401,9 +1428,9 @@ test("a kind switch restores the previous kind's distinct fields (session draft)
     const dashboard = await openDashboardTab(page);
 
     const site = dashboard.locator(".rr-master > details.rr-master-site").first();
-    await site.locator("> .rr-group-summary").click();
+    await unfoldMasterSiteGroup(site);
     const rule = site.locator(".rr-master-rule").first();
-    await rule.locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(rule);
     const fields = rule.locator(".rr-ed-fields");
 
     // * Radio order = replace, appendQuery, removeQuery, checkpoint, unwrap; the
@@ -1840,7 +1867,7 @@ test("an edit re-arms autosave without tripping the effect depth guard", async (
     });
 
     const seeded = dashboard.locator(".rr-master-site").first();
-    await seeded.locator(".rr-group-summary").click();
+    await unfoldMasterSiteGroup(seeded);
     await seeded.getByRole("textbox", { name: "Site", exact: true }).fill("/localhost-loop/");
 
     // * The change ARMS the debounce (the effect ran with a dirty store) …

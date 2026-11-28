@@ -79,6 +79,11 @@ describe("readDashboardTab", () => {
         expect(readDashboardTab(`https://x.test/#${DASHBOARD_HASH}/unknown`)).toBeNull();
         expect(readDashboardTab("https://x.test/")).toBeNull();
     });
+
+    it("ignores fragments that extend the marker without a segment", () => {
+        expect(readDashboardTab(`https://x.test/#${DASHBOARD_HASH}x`)).toBeNull();
+        expect(readDashboardTab(`https://x.test/#${DASHBOARD_HASH}/`)).toBeNull();
+    });
 });
 
 describe("normalizeRequest", () => {

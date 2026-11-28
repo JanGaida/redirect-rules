@@ -39,6 +39,15 @@ describe("extractJsonValue", () => {
         expect(extractJsonValue("no json here")).toBeNull();
         expect(extractJsonValue('{"kind":"replace"')).toBeNull();
     });
+
+    it("tracks escaped quotes inside strings", () => {
+        const text = '{"substitution":"say \\"hi\\" }","kind":"replace"}';
+        expect(extractJsonValue(text)).toBe(text);
+    });
+
+    it("rejects a mismatched closing bracket", () => {
+        expect(extractJsonValue('{"kind":"replace"]')).toBeNull();
+    });
 });
 
 describe("parseAssistantProposal", () => {
@@ -240,6 +249,45 @@ describe("parseAssistantProposal", () => {
     it("reports structure for an invalid rule", () => {
         const result = parseAssistantProposal(
             JSON.stringify({ siteRegex: "/a.test/", rules: [{ kind: "replace", regex: "/a/" }] }),
+            "",
+        );
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.code).toBe("structure");
+    });
+
+    it.each([
+        ["an empty array", "[]"],
+        ["a mixed array", '[{"kind":"replace","regex":"/a/","substitution":"b"},5]'],
+        ["an array of unrelated objects", '[{"foo":1}]'],
+        ["an object without a known shape", '{"hello":"world"}'],
+        ["an empty rules array", '{"siteRegex":"/a/","rules":[]}'],
+        ["mixed rules", '{"siteRegex":"/a/","rules":[{"kind":"replace","regex":"/a/","substitution":"b"},5]}'],
+    ])("reports structure for %s", (_label, text) => {
+        const result = parseAssistantProposal(text, "");
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.code).toBe("structure");
+    });
+
+    it("accepts a siteGroups wrapper", () => {
+        const result = parseAssistantProposal(
+            JSON.stringify({
+                siteGroups: [{ siteRegex: "/a.test/", rules: [{ kind: "replace", regex: "/a/", substitution: "b" }] }],
+            }),
+            "",
+        );
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.parsed.siteGroups).toHaveLength(1);
+    });
+
+    it("passes a transfer envelope straight to the strict parser", () => {
+        const result = parseAssistantProposal('{"format":"unknown-format","version":1}', "");
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.code).toBe("structure");
+    });
+
+    it("rejects an uncompilable site gate", () => {
+        const result = parseAssistantProposal(
+            JSON.stringify({ siteRegex: "/(/", kind: "replace", regex: "/a/", substitution: "b" }),
             "",
         );
         expect(result.ok).toBe(false);

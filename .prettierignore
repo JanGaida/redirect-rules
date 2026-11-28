@@ -21,5 +21,8 @@ playwright-report/
 
 # Coverage artifacts (generated, gitignored)
 coverage/
+
+# E2E badge artifacts (generated, published to the `badges` branch by CI)
+badges/
 CHANGELOG.md
 .release-please-manifest.json

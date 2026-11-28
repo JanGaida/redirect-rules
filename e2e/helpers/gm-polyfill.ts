@@ -9,12 +9,13 @@
  * equivalent so the script boots.
  *
  * ! LOCAL-STORAGE-FIRST reads: this
- *   userscript reads settings at `@run-at document-start` — BEFORE a document
- *   root exists — so reads must work without localStorage. Seeded values are
- *   baked into the script source; writes update memory immediately and mirror
- *   to localStorage once available (reload survival). Reads prefer localStorage
- *   (cross-tab current, Tampermonkey parity — a later-opened dashboard boots
- *   with the CURRENT values), then memory (document-start seed), then default.
+ *   userscript reads settings at `@run-at document-start`. Chromium exposes
+ *   localStorage there even before a document root exists, so reads can prefer
+ *   it directly; the try/catch covers opaque origins and disabled storage, with
+ *   the seeded memory as fallback. Writes update memory immediately and mirror
+ *   to localStorage (reload survival); reads prefer localStorage (cross-tab
+ *   current, Tampermonkey parity — a later-opened dashboard boots with the
+ *   CURRENT values), then memory (seed), then default.
  *
  * ! Registered menu commands are recorded so specs can invoke them by label
  *   (`__gmInvoke`) — dashboard-smoke uses this for the menu commands.
@@ -38,18 +39,13 @@ export function buildGmPolyfillInitScript(seed: Record<string, unknown> = {}): s
       var PREFIX = ${JSON.stringify(GM_STORAGE_PREFIX)};
       var memory = ${JSON.stringify(seed)};
 
-      // * Read preference: localStorage FIRST (when a document root exists),
-      //   memory as the document-start fallback — Tampermonkey's GM storage is
-      //   shared across tabs, so a LATER-OPENED dashboard must boot with the
-      //   CURRENT values, not the baked-in seed.
-      // * At document-start (pre-document-root) localStorage may be unavailable
-      //   — the seeded memory serves those reads (original design constraint).
+      // * Read preference: localStorage FIRST — Chromium exposes it at document-start
+      // * even before the document root exists. The try/catch covers opaque origins
+      // * and disabled storage; the seeded memory is the fallback for those reads.
       function readRaw(key) {
         try {
-          if (document.documentElement) {
-            var raw = localStorage.getItem(PREFIX + key);
-            if (raw !== null) return JSON.parse(raw);
-          }
+          var raw = localStorage.getItem(PREFIX + key);
+          if (raw !== null) return JSON.parse(raw);
         } catch (e) {}
         if (Object.prototype.hasOwnProperty.call(memory, key)) return memory[key];
         return undefined;
@@ -63,27 +59,25 @@ export function buildGmPolyfillInitScript(seed: Record<string, unknown> = {}): s
       window.GM_setValue = function(key, val) {
         memory[key] = val;
         try {
-          if (document.documentElement) localStorage.setItem(PREFIX + key, JSON.stringify(val));
+          localStorage.setItem(PREFIX + key, JSON.stringify(val));
         } catch (e) {}
       };
 
       window.GM_deleteValue = function(key) {
         delete memory[key];
         try {
-          if (document.documentElement) localStorage.removeItem(PREFIX + key);
+          localStorage.removeItem(PREFIX + key);
         } catch (e) {}
       };
 
       window.GM_listValues = function() {
         var keys = Object.keys(memory);
         try {
-          if (document.documentElement) {
-            for (var i = 0; i < localStorage.length; i++) {
-              var k = localStorage.key(i);
-              if (k && k.indexOf(PREFIX) === 0) {
-                var short = k.slice(PREFIX.length);
-                if (keys.indexOf(short) === -1) keys.push(short);
-              }
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(PREFIX) === 0) {
+              var short = k.slice(PREFIX.length);
+              if (keys.indexOf(short) === -1) keys.push(short);
             }
           }
         } catch (e) {}

@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
 import type { Settings, SiteRule } from "../../core/settings";
-import { diffTransfer, parseSettingsTransfer, TRANSFER_FORMAT, TRANSFER_VERSION } from "../../core/settings-transfer";
 import {
+    diffTransfer,
+    parseSettingsTransfer,
+    SETTINGS_FIELDS,
+    TRANSFER_FORMAT,
+    TRANSFER_VERSION,
+} from "../../core/settings-transfer";
+import {
+    allSelectableSelection,
     buildExportRows,
     buildFieldSections,
     buildMergeRows,
     checkState,
     filterFieldRows,
     filterGroupRows,
+    formatFieldValue,
     formatRule,
     fullExportSelection,
     groupCheckState,
     groupParentDisabled,
     isApplyDisabled,
+    isMetaSelected,
     isRuleSelected,
     ruleCheckboxDisabled,
     sectionCheckState,
@@ -382,5 +391,187 @@ describe("apply gating", () => {
 describe("formatRule", () => {
     it("summarizes an unwrap rule with its regex", () => {
         expect(formatRule({ kind: "unwrap", regex: "/u=([^&]+)/" })).toBe("/u=([^&]+)/");
+    });
+
+    it("summarizes query rules with and without a gate", () => {
+        expect(formatRule({ kind: "appendQuery", params: "a=1" })).toBe("a=1");
+        expect(formatRule({ kind: "appendQuery", regex: "/g/", params: "a=1" })).toBe("a=1 @ /g/");
+        expect(formatRule({ kind: "removeQuery", keys: "utm_*" })).toBe("utm_*");
+        expect(formatRule({ kind: "removeQuery", regex: "/g/", keys: "utm_*" })).toBe("utm_* @ /g/");
+        expect(formatRule({ kind: "checkpoint", regex: "/go/", mode: "stop" })).toBe("/go/ (stop)");
+    });
+});
+
+describe("value formatting fallbacks", () => {
+    it("renders a missing value and non-finite delays as placeholders", () => {
+        expect(formatFieldValue("locale", undefined, t)).toBe("—");
+        expect(formatFieldValue("autosaveDelayMs", Number.NaN, t)).toBe("—");
+    });
+
+    it("keeps sub-second delays in milliseconds", () => {
+        expect(formatFieldValue("autosaveDelayMs", 1500, t)).toBe("1500 ms");
+    });
+});
+
+describe("unknown imported units", () => {
+    it("falls back to a raw summary and an unknown kind label", () => {
+        const current = makeSettings([]);
+        const transfer = parsed(
+            JSON.stringify({
+                rules: [
+                    {
+                        siteRegex: "/g/",
+                        rules: [
+                            {
+                                kind: "mystery",
+                                regex: "/r/",
+                                substitution: "s",
+                                params: "p",
+                                keys: "k",
+                                mode: "stop",
+                            },
+                        ],
+                    },
+                ],
+            }),
+        );
+        const row = buildMergeRows(current, diffTransfer(current, transfer), t).groups[0].rules[0];
+
+        expect(row.kindLabel).toBe("—");
+        expect(row.valid).toBe(false);
+        expect(row.imported).toBe("/r/ s p k stop");
+    });
+
+    it("omits the summary when the raw unit is not an object", () => {
+        const current = makeSettings([]);
+        const transfer = parsed(JSON.stringify({ rules: [{ siteRegex: "/g/", rules: ["garbage"] }] }));
+        const row = buildMergeRows(current, diffTransfer(current, transfer), t).groups[0].rules[0];
+
+        expect(row.kindLabel).toBe("—");
+        expect(row.imported).toBeUndefined();
+    });
+});
+
+describe("parent/rule locking", () => {
+    it("enables the parent for a valid group without metadata", () => {
+        const current = makeSettings([{ siteRegex: "/g/", rules: [RULE_A] }]);
+        const transfer = parsed(envelope({}, [{ siteRegex: "/g/", rules: [{ ruleIndex: 0, rule: RULE_B }] }]));
+        const group = buildMergeRows(current, diffTransfer(current, transfer), t).groups[0];
+
+        expect(group.meta).toBeUndefined();
+        expect(groupParentDisabled(group)).toBe(false);
+    });
+
+    it("locks invalid rules, invalid gates, and invalid new-group metadata", () => {
+        const current = makeSettings([{ siteRegex: "/g/", rules: [RULE_A] }]);
+        const invalidRuleTransfer = parsed(
+            envelope({}, [
+                {
+                    siteRegex: "/g/",
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/(bad/", substitution: "x" } }],
+                },
+            ]),
+        );
+        const invalidRule = buildMergeRows(current, diffTransfer(current, invalidRuleTransfer), t).groups[0];
+        expect(ruleCheckboxDisabled(invalidRule, { fields: [], groups: [] }, invalidRule.rules[0])).toBe(true);
+
+        const invalidGate = buildExportRows(makeSettings([{ siteRegex: "/(bad/", rules: [RULE_A] }]), t).groups[0];
+        expect(ruleCheckboxDisabled(invalidGate, { fields: [], groups: [] }, invalidGate.rules[0])).toBe(true);
+
+        const newGroupTransfer = parsed(
+            envelope({}, [
+                {
+                    siteRegex: "/new/",
+                    description: "description without entries",
+                    rules: [{ ruleIndex: 0, rule: RULE_A }],
+                },
+            ]),
+        );
+        const newGroup = buildMergeRows(makeSettings([]), diffTransfer(makeSettings([]), newGroupTransfer), t)
+            .groups[0];
+        expect(newGroup.isNew).toBe(true);
+        expect(newGroup.meta).toMatchObject({ valid: false });
+        expect(ruleCheckboxDisabled(newGroup, { fields: [], groups: [] }, newGroup.rules[0])).toBe(true);
+    });
+});
+
+describe("toggling", () => {
+    it("toggles single fields and whole sections on and off", () => {
+        const rows = buildExportRows(makeSettings([]), t).fields;
+        const section = buildFieldSections(rows, t)[0].fields;
+
+        expect(toggleField({ fields: [], groups: [] }, "locale", true).fields).toEqual(["locale"]);
+        const all = toggleFieldSection({ fields: ["locale"], groups: [] }, section, true);
+        expect(all.fields).toEqual(["locale", "autosaveDelayMs"]);
+        expect(toggleFieldSection(all, section, false).fields).toEqual([]);
+    });
+
+    it("unchecks a parent and re-checks rules in index order", () => {
+        const current = makeSettings([]);
+        const transfer = parsed(
+            envelope({}, [
+                {
+                    siteRegex: "/new/",
+                    rules: [
+                        { ruleIndex: 0, rule: RULE_A },
+                        { ruleIndex: 1, rule: RULE_B },
+                    ],
+                },
+            ]),
+        );
+        const group = buildMergeRows(current, diffTransfer(current, transfer), t).groups[0];
+        const empty = { fields: [], groups: [] };
+
+        const checked = toggleGroup(empty, group, true);
+        expect(toggleGroup(checked, group, false).groups).toEqual([]);
+
+        const reversed = toggleGroupRule(toggleGroupRule(empty, group, 1, true), group, 0, true);
+        expect(reversed.groups[0].rules).toEqual([0, 1]);
+        expect(isRuleSelected(reversed, 0, 0)).toBe(true);
+        expect(isMetaSelected({ fields: [], groups: [{ groupIndex: 0, meta: true, rules: [] }] }, 0)).toBe(true);
+        expect(isMetaSelected(empty, 0)).toBe(false);
+    });
+});
+
+describe("selection validation + preselect", () => {
+    it("detects invalid selected fields, groups, and metadata", () => {
+        const current = makeSettings([{ siteRegex: "/g/", rules: [RULE_A] }]);
+        const transfer = parsed(
+            envelope({ logLevel: "bogus" }, [
+                { siteRegex: "/g/", description: "new", previewEntries: [], rules: [{ ruleIndex: 0, rule: RULE_A }] },
+            ]),
+        );
+        const rows = buildMergeRows(current, diffTransfer(current, transfer), t);
+
+        expect(rows.fields.find((row) => row.field === "logLevel")?.valid).toBe(false);
+        expect(selectionHasInvalid(rows, { fields: ["logLevel"], groups: [] })).toBe(true);
+        // * Unknown group indexes are ignored, never treated as invalid.
+        expect(selectionHasInvalid(rows, { fields: [], groups: [{ groupIndex: 9, meta: false, rules: [0] }] })).toBe(
+            false,
+        );
+
+        const invalidGate = buildExportRows(makeSettings([{ siteRegex: "/(bad/", rules: [RULE_A] }]), t);
+        expect(
+            selectionHasInvalid(invalidGate, { fields: [], groups: [{ groupIndex: 0, meta: false, rules: [0] }] }),
+        ).toBe(true);
+
+        const metaTransfer = parsed(
+            envelope({}, [{ siteRegex: "/g/", description: "no entries", rules: [{ ruleIndex: 0, rule: RULE_A }] }]),
+        );
+        const metaRows = buildMergeRows(current, diffTransfer(current, metaTransfer), t);
+        expect(selectionHasInvalid(metaRows, { fields: [], groups: [{ groupIndex: 0, meta: true, rules: [] }] })).toBe(
+            true,
+        );
+    });
+
+    it("preselects every valid unit and skips groups without a usable target", () => {
+        const rows = buildExportRows(makeSettings([{ siteRegex: "/g/", rules: [RULE_A] }]), t);
+        expect(allSelectableSelection(rows)).toEqual({
+            fields: [...SETTINGS_FIELDS],
+            groups: [{ groupIndex: 0, meta: true, rules: [0] }],
+        });
+
+        const blocked = buildExportRows(makeSettings([{ siteRegex: "/(bad/", rules: [RULE_A] }]), t);
+        expect(allSelectableSelection(blocked).groups).toEqual([]);
     });
 });

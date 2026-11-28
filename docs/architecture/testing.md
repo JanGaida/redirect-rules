@@ -30,13 +30,14 @@ flowchart TB
         I1["watcher.test.ts<br/>(fake runtime + real history<br/>+ stats sink)"]
         I2["settings-store.test.ts<br/>(store singleton)"]
     end
-    subgraph E2E["Layer 3 — Playwright (Firefox)"]
+    subgraph E2E["Layer 3 — Playwright (Firefox + Chromium)"]
         E1["e2e/tests/*.spec.ts"]
         Helpers["e2e/helpers/<br/>(fixture-server, gm-polyfill, userscript)"]
         Dist["dist/redirect-rules.user.js"]
     end
     subgraph Browser["browser"]
         FF["Firefox"]
+        CR["Chromium"]
         Fixtures["synthetic fixture pages<br/>(e2e/helpers/fixture-server.ts,<br/>port 4184 default, RR_FIXTURE_PORT override)"]
     end
 
@@ -55,6 +56,7 @@ flowchart TB
     Helpers -.->|"injects"| Dist
     Helpers -.->|"serves"| Fixtures
     E1 -->|"runs against"| FF
+    E1 -->|"runs against"| CR
 ```
 
 ## Layer Contracts
@@ -75,14 +77,36 @@ flowchart TB
   (adoption while clean, conflict hint while dirty). The pure speed mapping
   (nearest/next canonical delay) lives in a node unit test. jsdom's
   `location.replace` is not implemented — the fake runtime never touches it.
-- **E2E (Firefox, in CI)**: the built userscript + GM polyfill are injected via
+- **GUI helpers**: `download.ts` (GM_download data URL + Blob fallback),
+  `clipboard.ts` (GM → navigator → execCommand chain) and `autogrow.ts` run under
+  jsdom with stubbed GM/Blob/selection APIs; `token-reference-data.ts` (i18n-key
+  coverage), `icon.ts` (inlined `?raw` registry) and `rule-policy.ts` run under
+  node. `settings-transfer-view.test.ts` pins the import/export dialog's row
+  builders, tri-state parents, selection/filter helpers and apply gating.
+  `dashboard-open.test.ts` exercises the opener with `App.svelte` mocked,
+  keeping the Svelte takeover/mount path E2E-only.
+- **E2E (Firefox + Chromium, in CI)**: the built userscript + GM polyfill are injected via
   CONTEXT-scoped `addInitScript` (document-start parity — this boot reads no
   `documentElement`; popups created by `window.open`/`GM_openInTab` would NOT get
   page-scoped init scripts) so redirects are REAL navigations. Committed synthetic
   fixtures (ADR 0004) make the suite CI-eligible, unlike the youtube-ui-tweaks
   capture pipeline. Specs run the PROD artifact; the dev build writes a distinct
   `redirect-rules.dev.user.js` so a dev run can never silently test the prod bundle
-  (helper param `dev`).
+  (helper param `dev`). Firefox and Chromium both run the same full suite (ADR 0048).
+  The polyfill's document-start storage mirror, the `<details>` unfold helpers, and
+  the popover entry-transition settle are test-infra fixes; the open-state fix in
+  `RulesTab.svelte` is production behavior (see Flake hygiene).
+- **E2E badges (ADR 0049)**: `playwright.config.ts` always writes the Playwright
+  JSON report into the gitignored artifact directory; `scripts/e2e-badge.mjs` turns
+  it into `{ schemaVersion, label, message, color }` (`passed/total`, green only at
+  100 %, orange from 80 %, else red) and the main-push step publishes it to the
+  generated `badges` branch for the shields endpoint chips.
+- **Flake hygiene**: the E2E workflows upload the Playwright artifact directory
+  (traces, screenshots, JSON report) on failure and keep `trace: on-first-retry`. A
+  reproduced race — the `<details>` accordion re-closed a group opened inside
+  Chromium's queued `toggle` task window — is pinned by `dashboard-smoke.spec.ts`:
+  the element owns `open`, `openSite` mirrors it, and state changes are pushed
+  back imperatively so unrelated re-renders cannot fight a queued toggle.
 - **Dashboard takeover tests** (ADR 0011, MULTI-DASHBOARD 27.10.): the takeover tab
   is window.open'ed — its init scripts run on the PROVISIONAL about:blank document
   (location still reads "about:blank"), which the boot defers until the url commits;
@@ -156,17 +180,20 @@ flowchart TB
 
 ## Coverage & Badge
 
-- **Scope**: `src/**/*.{ts,svelte}` — every TypeScript module plus every Svelte
-  component and tab, minus tests, ambient `.d.ts` files, and the generated
-  `i18n.keys.ts`. No Vitest test renders a component, so all components sit at 0 %
-  by design: the aggregate is a gap signal, not a release gate, and Playwright
-  remains their behavioral coverage.
+- **Scope**: `src/**/*.ts` only — every TypeScript module, including the
+  `.svelte.ts` rune modules, minus tests, ambient `.d.ts` files, and the generated
+  `i18n.keys.ts`. Svelte markup is E2E-owned and leaves the denominator (ADR 0048);
+  no Vitest test renders a component (`dashboard-open.test.ts` mocks `App.svelte`).
+  `main.ts` stays at 0 % (boot entry with import-time side effects; E2E covers it).
+  The aggregate is not pinned here — the coverage report and the `unit coverage`
+  chip carry the current value. The remaining gaps are boot/DOM glue (`main.ts`,
+  `dashboard.ts`, `drag-controller.ts`) and defensive branches (debug-only logs,
+  dead guards), not untested logic.
 - **Gate**: CI runs `npm run test:coverage` in the `gate` job. There is no
-  `coverage.thresholds` value — a new untested component lowers the percentage and
-  must not block a PR.
+  `coverage.thresholds` value — the badge is a gap signal and must not block a PR.
 - **Badge data**: the `coverage-asset` release job runs `npm run test:coverage` on
   the release tag and attaches the Vitest json-summary as `coverage-summary.json`.
-  The README chip reads `total.lines.pct` from
+  The README chip is labeled `unit coverage` and reads `total.lines.pct` from
   `https://github.com/JanGaida/redirect-rules/releases/latest/download/coverage-summary.json`
   with a shields.io dynamic JSON badge (`query=$.total.lines.pct`). The endpoint
   badge is not used: shields blocks `github.com` URLs for that service.
@@ -192,12 +219,13 @@ flowchart TB
 
 ## References
 
-- Unit specs: `src/lib/core/__tests__/parse-regex.test.ts`, `src/lib/core/__tests__/append-query.test.ts`, `src/lib/core/__tests__/decode-surface.test.ts`, `src/lib/core/__tests__/redirect-engine.test.ts`, `src/lib/core/__tests__/settings.test.ts`, `src/lib/core/__tests__/locale.test.ts`, `src/lib/core/__tests__/corpus.test.ts`, `src/lib/core/__tests__/preview.test.ts`, `src/lib/core/__tests__/stats.test.ts`, `src/lib/core/__tests__/storage.test.ts`, `src/lib/core/__tests__/chat-template.test.ts`, `src/lib/core/__tests__/settings-diff.test.ts`, `src/lib/core/__tests__/encoding.test.ts`, `src/lib/gui/__tests__/dashboard-protocol.test.ts`, `src/lib/gui/__tests__/i18n-parity.test.ts`, `src/lib/gui/__tests__/i18n-usage.test.ts`, `src/lib/gui/__tests__/motion.test.ts`, `src/lib/gui/__tests__/drag-controller.test.ts`
-- Integration specs: `src/lib/core/__tests__/watcher.test.ts`, `src/lib/core/__tests__/stats-drain.test.ts`, `src/lib/core/__tests__/settings-store.test.ts`, `src/lib/gui/__tests__/autosave.test.ts`
+- Unit specs: `src/lib/core/__tests__/parse-regex.test.ts`, `src/lib/core/__tests__/append-query.test.ts`, `src/lib/core/__tests__/decode-surface.test.ts`, `src/lib/core/__tests__/redirect-engine.test.ts`, `src/lib/core/__tests__/settings.test.ts`, `src/lib/core/__tests__/locale.test.ts`, `src/lib/core/__tests__/corpus.test.ts`, `src/lib/core/__tests__/preview.test.ts`, `src/lib/core/__tests__/stats.test.ts`, `src/lib/core/__tests__/storage.test.ts`, `src/lib/core/__tests__/chat-template.test.ts`, `src/lib/core/__tests__/settings-diff.test.ts`, `src/lib/core/__tests__/encoding.test.ts`, `src/lib/core/__tests__/rule-policy.test.ts`, `src/lib/gui/__tests__/dashboard-protocol.test.ts`, `src/lib/gui/__tests__/i18n-parity.test.ts`, `src/lib/gui/__tests__/i18n-usage.test.ts`, `src/lib/gui/__tests__/motion.test.ts`, `src/lib/gui/__tests__/drag-controller.test.ts`, `src/lib/gui/__tests__/settings-transfer-view.test.ts`, `src/lib/gui/__tests__/icon.test.ts`, `src/lib/gui/__tests__/token-reference-data.test.ts`
+- Integration specs: `src/lib/core/__tests__/watcher.test.ts`, `src/lib/core/__tests__/stats-drain.test.ts`, `src/lib/core/__tests__/settings-store.test.ts`, `src/lib/gui/__tests__/autosave.test.ts`, `src/lib/gui/__tests__/download.test.ts`, `src/lib/gui/__tests__/clipboard.test.ts`, `src/lib/gui/__tests__/autogrow.test.ts`, `src/lib/gui/__tests__/dashboard-open.test.ts`
 - E2E: `e2e/tests/redirect-on-load.spec.ts`, `e2e/tests/no-match.spec.ts`, `e2e/tests/spa-navigation.spec.ts`, `e2e/tests/append-query.spec.ts`, `e2e/tests/loop-guard.spec.ts`, `e2e/tests/dashboard-smoke.spec.ts`, `e2e/tests/group-enable.spec.ts`, `e2e/tests/toast-undo.spec.ts`, `e2e/tests/performance-mode.spec.ts`
 - E2E helpers: `e2e/helpers/fixture-server.ts`, `e2e/helpers/gm-polyfill.ts`, `e2e/helpers/userscript.ts`, `e2e/helpers/dashboard.ts`
-- CI wiring: `.github/workflows/ci.yml`, `.github/workflows/release-please.yml`
+- CI wiring: `.github/workflows/ci.yml`, `.github/workflows/e2e-firefox.yml`, `.github/workflows/e2e-chromium.yml`, `.github/workflows/release-please.yml`
 - Coverage: `vitest.config.ts`
-- Decisions: `docs/adr/0004-synthetic-e2e-in-ci.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`, `docs/adr/0047-coverage-badge-release-asset.md`
+- Chromium project: `playwright.chromium.config.ts`
+- Decisions: `docs/adr/0004-synthetic-e2e-in-ci.md`, `docs/adr/0011-dashboard-hash-takeover.md`, `docs/adr/0012-dashboard-host-stub.md`, `docs/adr/0020-multi-dashboard-autosave.md`, `docs/adr/0031-dashboard-interaction-model.md`, `docs/adr/0047-coverage-badge-release-asset.md`, `docs/adr/0048-unit-coverage-scope-and-e2e-browser-matrix.md`
 
-Verified: 2026-11-22 — against the Vitest coverage config, the coverage-asset release job, and the current unit-test inventory (Svelte components still unit-untested).
+Verified: 2026-11-28 — TS-only coverage scope, Firefox/Chromium workflows, E2E pass-count badges + failure artifacts (ADR 0049), test inventory; Svelte markup stays E2E-owned.

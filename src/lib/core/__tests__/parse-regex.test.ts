@@ -160,6 +160,11 @@ describe("normalizeWhitespaceVariants", () => {
     it("leaves patterns without whitespace untouched", () => {
         expect(normalizeWhitespaceVariants("example\\.com")).toBe("example\\.com");
     });
+
+    it("keeps a dangling escape literal (no following character)", () => {
+        expect(normalizeWhitespaceVariants("a\\")).toBe("a\\");
+        expect(normalizeWhitespaceVariants("\\")).toBe("\\");
+    });
 });
 
 describe("parseRegex — whitespace variants", () => {

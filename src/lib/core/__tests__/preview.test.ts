@@ -88,6 +88,8 @@ describe("expandSubstitution — parity with native String.replace", () => {
         { re: /(?<word>\w+)/, subject: "hi there", template: "[$<word>][$1]$$" },
         { re: /(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)/, subject: "abcdefghijkl", template: "[$10][$11][$12]" },
         { re: /(a)(b)/, subject: "ab", template: "[$1$2$1$2]" },
+        { re: /(a)/, subject: "xa", template: "$1$" }, // * trailing "$" stays literal
+        { re: /(a)/, subject: "xa", template: "$1$x" }, // * unknown "$x" keeps only the "$"
     ];
 
     it.each(corpus)("expands %s on %j exactly like native replace", ({ re, subject, template }) => {
@@ -473,6 +475,24 @@ describe("previewChain — parity with applyRules", () => {
         const engine = applyRules(url, compileRules(disabled));
         expect(chain.finalUrl).toBe(engine.url);
         expect(chain.steps).toHaveLength(engine.applied.length);
+    });
+
+    it("omits steps whose rule leaves the url unchanged", () => {
+        const rules: SiteRule[] = [
+            {
+                siteRegex: "/x\\.test/",
+                rules: [
+                    { kind: "replace", regex: "/\\/old\\//", substitution: "/new/" },
+                    { kind: "replace", regex: "/\\/absent\\//", substitution: "/other/" },
+                ],
+            },
+        ];
+        const chain = previewChain("https://x.test/old/page", rules);
+
+        expect(chain.finalUrl).toBe("https://x.test/new/page");
+        expect(chain.steps).toEqual([
+            { siteIndex: 0, ruleIndex: 0, oldUrl: "https://x.test/old/page", newUrl: "https://x.test/new/page" },
+        ]);
     });
 });
 

@@ -85,6 +85,15 @@ describe("drainPendingStats", () => {
         expect(gmStore.has(STORAGE_KEY_STATS)).toBe(false);
     });
 
+    it("returns null for an empty or non-object window.name payload", () => {
+        window.name = "";
+        expect(drainPendingStats()).toBeNull();
+
+        window.name = "[1,2]";
+        expect(drainPendingStats()).toBeNull();
+        expect(window.name).toBe("[1,2]");
+    });
+
     it("keeps the stash when the GM write fails", () => {
         const delta = { counts: { hash: 2 }, total: 2, last: null };
         window.name = JSON.stringify({ rrStatsDelta: delta });
@@ -229,5 +238,19 @@ describe("clearStatsDeltaStash", () => {
         clearStatsDeltaStash();
 
         expect(window.name).toBe("not json at all");
+    });
+
+    it("leaves an empty, non-object, or stash-free payload untouched", () => {
+        window.name = "";
+        clearStatsDeltaStash();
+        expect(window.name).toBe("");
+
+        window.name = "[1]";
+        clearStatsDeltaStash();
+        expect(window.name).toBe("[1]");
+
+        window.name = JSON.stringify({ other: 1 });
+        clearStatsDeltaStash();
+        expect(window.name).toBe('{"other":1}');
     });
 });

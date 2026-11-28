@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { invokeGmCommandWithGesture } from "./gm-polyfill";
 import { blockFontRequests } from "./userscript";
 
@@ -47,4 +47,24 @@ export async function openDashboardTab(page: Page, label = "Redirect Rules: Open
         return popup;
     }
     throw new Error(`dashboard tab "${label}" did not materialize within ${TAB_DEADLINE_MS} ms`);
+}
+
+/**
+ * Ensures a master site group is open and its body is in the ARIA tree.
+ *
+ * * Chromium queues the native <details> toggle task; a following fill/click
+ *   can otherwise hit the still-closed body (closed details are pruned from
+ *   the accessibility tree).
+ */
+export async function unfoldMasterSiteGroup(site: Locator): Promise<void> {
+    const summary = site.locator("> .rr-group-summary");
+    if (!(await site.evaluate((el: HTMLDetailsElement) => el.open))) await summary.click();
+    await expect(site.getByRole("button", { name: "Add rule" })).toBeVisible();
+}
+
+/** Same barrier for a master rule's inline editor body. */
+export async function unfoldMasterRule(rule: Locator): Promise<void> {
+    const summary = rule.locator("> .rr-master-rule-summary");
+    if (!(await rule.evaluate((el: HTMLDetailsElement) => el.open))) await summary.click();
+    await expect(rule.locator(".rr-ed-fields")).toBeVisible();
 }
