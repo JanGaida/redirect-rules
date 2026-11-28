@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/JanGaida/redirect-rules/compare/v1.3.0...v1.4.0) (2026-11-28)
+
+
+### Features
+
+* **ci:** add Chromium E2E matrix and pass-count badges ([#22](https://github.com/JanGaida/redirect-rules/issues/22)) ([303f4d2](https://github.com/JanGaida/redirect-rules/commit/303f4d21027e07186f9255afc81c6822a245b859))
+
+
+### Bug Fixes
+
+* **coverage:** use the default badge cache window ([#20](https://github.com/JanGaida/redirect-rules/issues/20)) ([4b883da](https://github.com/JanGaida/redirect-rules/commit/4b883da2cdb69546a37a1528ca21ededc4312ba8))
+
 ## [1.3.0](https://github.com/JanGaida/redirect-rules/compare/v1.2.0...v1.3.0) (2026-11-22)
 
 
