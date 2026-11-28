@@ -46,15 +46,18 @@ jobs:
         run: |
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
+          # * Local artifact keeps the gitignored badges/ dir; the remote path is
+          # * the branch ROOT — the README endpoint URL is .../badges/<file>.
           file="badges/e2e-chromium.json"
+          path="e2e-chromium.json"
           if ! gh api "repos/$repo/git/ref/heads/badges" >/dev/null 2>&1; then
             gh api --method POST "repos/$repo/git/refs" \
               -f ref=refs/heads/badges -f sha="$GITHUB_SHA" >/dev/null 2>&1 || true
           fi
           for attempt in 1 2 3; do
-            sha="$(gh api "repos/$repo/contents/$file?ref=badges" --jq .sha 2>/dev/null || true)"
-            args=(--method PUT "repos/$repo/contents/$file"
-              -f message="chore(badges): update $(basename "$file")"
+            sha="$(gh api "repos/$repo/contents/$path?ref=badges" --jq .sha 2>/dev/null || true)"
+            args=(--method PUT "repos/$repo/contents/$path"
+              -f message="chore(badges): update $path"
               -f branch=badges
               -f content="$(base64 -w0 "$file")")
             if [ -n "$sha" ]; then args+=(-f sha="$sha"); fi

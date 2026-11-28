@@ -34,9 +34,12 @@ Verified 2026-11-28: the shields endpoint badge fetches
 
 ## Decision
 
-1. **One JSON endpoint per browser** on a dedicated generated branch:
-   `badges/e2e-firefox.json` and `badges/e2e-chromium.json`, each
-   `{ schemaVersion: 1, label, message, color }`.
+1. **One JSON endpoint per browser** on a dedicated generated branch named
+   `badges`. The files sit at the **branch root** as `e2e-firefox.json` and
+   `e2e-chromium.json`, each `{ schemaVersion: 1, label, message, color }`. The
+   README endpoint URL `…/redirect-rules/badges/<file>` resolves to branch
+   `badges` plus root path `<file>`, so a nested `badges/` directory on the
+   branch would never be found.
 2. **Playwright's JSON report is the single input** (`test-results/playwright.json`,
    already gitignored). `passed = stats.expected + stats.flaky` (a flaky test did pass);
    `total = passed + stats.unexpected + stats.skipped`.
