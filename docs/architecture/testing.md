@@ -98,10 +98,9 @@ flowchart TB
   `RulesTab.svelte` is production behavior (see Flake hygiene).
 - **E2E badges (ADR 0049)**: `playwright.config.ts` always writes the Playwright
   JSON report into the gitignored artifact directory; `scripts/e2e-badge.mjs` turns
-  it into `{ schemaVersion, label, message, color }` (`passed/total`; GitHub state
-  palette — `#28a745` only at 100 %, `#dbab09` from 80 %, else `#cb2431`) and the
-  main-push step publishes it to the generated `badges` branch for the shields
-  endpoint chips.
+  it into `{ schemaVersion, label, message, color }` (`passed/total`; shields tokens —
+  `brightgreen` only at 100 %, `orange` from 80 %, else `red`) and the main-push
+  step publishes it to the generated `badges` branch for the shields endpoint chips.
 - **Flake hygiene**: the E2E workflows upload the Playwright artifact directory
   (traces, screenshots, JSON report) on failure and keep `trace: on-first-retry`. A
   reproduced race — the `<details>` accordion re-closed a group opened inside
