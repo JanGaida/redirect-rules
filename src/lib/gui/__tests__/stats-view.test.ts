@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ruleHash, type Stats } from "../../core/stats";
+import type { Locale } from "../../core/locale";
 import type { SiteRule, UrlRule } from "../../core/settings";
 import { buildStatsView, formatStatsTimestamp, ruleRawSummary, ruleSummary } from "../stats-view";
 
@@ -264,6 +265,11 @@ describe("ruleSummary", () => {
         expect(ruleSummary({ kind: "appendQuery", regex: "/g/", params: "a=1" })).toBe("a=1");
         expect(ruleSummary({ kind: "checkpoint", regex: "/go/", mode: "stop" })).toBe("go");
     });
+
+    it("renders an em dash for empty query units", () => {
+        expect(ruleSummary({ kind: "appendQuery", regex: "", params: "" })).toBe("—");
+        expect(ruleSummary({ kind: "removeQuery", regex: "", keys: "" })).toBe("—");
+    });
 });
 
 describe("ruleRawSummary", () => {
@@ -272,6 +278,42 @@ describe("ruleRawSummary", () => {
         expect(ruleRawSummary({ kind: "appendQuery", regex: "", params: "a=1" })).toBe("a=1");
         expect(ruleRawSummary({ kind: "appendQuery", regex: "/g/", params: "a=1" })).toBe("a=1 (/g/)");
         expect(ruleRawSummary({ kind: "checkpoint", regex: "/go/", mode: "stop" })).toBe("/go/ (stop)");
+    });
+
+    it("summarizes removeQuery and unwrap units", () => {
+        expect(ruleRawSummary({ kind: "removeQuery", regex: "/g/", keys: "utm_*" })).toBe("utm_* (/g/)");
+        expect(ruleRawSummary({ kind: "removeQuery", regex: "", keys: "utm_*" })).toBe("utm_*");
+        expect(ruleRawSummary({ kind: "unwrap", regex: "/u=([^&]+)/" })).toBe("/u=([^&]+)/");
+    });
+});
+
+describe("deterministic ordering ties", () => {
+    it("breaks equal counts by label, then by source id, then by position", () => {
+        const groups = [
+            site("/a/", [replace("/x/", "y")]),
+            site("/a/", [replace("/x/", "y")]),
+            site("/b/", [replace("/x/", "y")]),
+            site("/c/", [replace("/x/", "y"), replace("/x/", "y")]),
+        ];
+        const stats = statsFor(groups, [
+            [0, 0, 1],
+            [1, 0, 1],
+            [2, 0, 1],
+            [3, 0, 1],
+            [3, 1, 1],
+        ]);
+        const view = buildStatsView(groups, stats, "en");
+
+        // * Equal counts: the busier site first, then label, then source id.
+        expect(view.perSite.map((row) => row.id)).toEqual(["3", "0", "1", "2"]);
+        // * Identical rules in one site fall back to their authored position.
+        expect(view.topRules.map((row) => `${row.siteId}:${row.position}`)).toEqual([
+            "0:1",
+            "1:1",
+            "2:1",
+            "3:1",
+            "3:2",
+        ]);
     });
 });
 
@@ -285,5 +327,11 @@ describe("formatStatsTimestamp", () => {
     it("falls back to an em dash for non-finite input", () => {
         expect(formatStatsTimestamp(Number.NaN, "en")).toBe("—");
         expect(formatStatsTimestamp(Number.POSITIVE_INFINITY, "de")).toBe("—");
+    });
+
+    it("falls back to an em dash when the locale is invalid", () => {
+        // * Out-of-contract tag: Intl throws RangeError — the fail-soft path.
+        const invalid = "en_US" as unknown as Locale;
+        expect(formatStatsTimestamp(Date.UTC(2026, 10, 2), invalid)).toBe("—");
     });
 });

@@ -464,3 +464,68 @@ describe("normalizeSettings — checkpoint rules", () => {
         expect(out.rules[0].rules).toHaveLength(0);
     });
 });
+
+describe("normalizeSettings — persisted position and legacy previews", () => {
+    it("keeps a valid lastSelection and drops malformed ones", () => {
+        const kept = normalizeSettings({ locale: "en", rules: [], lastSelection: { siteIndex: 2, ruleIndex: 1 } });
+        expect(kept.lastSelection).toEqual({ siteIndex: 2, ruleIndex: 1 });
+
+        const malformed: unknown[] = [
+            null,
+            "x",
+            { siteIndex: -1, ruleIndex: 0 },
+            { siteIndex: 0.5, ruleIndex: 0 },
+            { siteIndex: 0 },
+        ];
+        for (const lastSelection of malformed) {
+            expect(normalizeSettings({ locale: "en", rules: [], lastSelection }).lastSelection).toBeUndefined();
+        }
+    });
+
+    it("accepts legacy previewUrls strings and testUrl objects", () => {
+        const out = normalizeSettings({
+            locale: "en",
+            rules: [
+                {
+                    siteRegex: "/a/",
+                    previewUrls: [
+                        "https://a.test/x",
+                        { testUrl: "https://a.test/legacy", testOutputUri: "https://a.test/out" },
+                    ],
+                    rules: [{ kind: "replace", regex: "/x/", substitution: "y" }],
+                },
+            ],
+        });
+        expect(out.rules[0].previewEntries).toEqual([
+            { url: "https://a.test/x", testOutputUri: "" },
+            { url: "https://a.test/legacy", testOutputUri: "https://a.test/out" },
+        ]);
+    });
+
+    it("drops malformed preview entries instead of throwing", () => {
+        const out = normalizeSettings({
+            locale: "en",
+            rules: [
+                {
+                    siteRegex: "/a/",
+                    previewEntries: [null, 5, { url: 5 }],
+                    rules: [{ kind: "replace", regex: "/x/", substitution: "y" }],
+                },
+            ],
+        });
+        expect(out.rules[0].previewEntries).toEqual([]);
+    });
+
+    it("defaults an out-of-range autosave delay", () => {
+        expect(normalizeSettings({ locale: "en", rules: [], autosaveDelayMs: 100 }).autosaveDelayMs).toBe(2000);
+        expect(normalizeSettings({ locale: "en", rules: [], autosaveDelayMs: 250 }).autosaveDelayMs).toBe(250);
+    });
+
+    it("drops an appendQuery rule without a params string", () => {
+        const out = normalizeSettings({
+            locale: "en",
+            rules: [{ siteRegex: "/a/", rules: [{ kind: "appendQuery", params: 5 }] }],
+        });
+        expect(out.rules[0].rules).toEqual([]);
+    });
+});

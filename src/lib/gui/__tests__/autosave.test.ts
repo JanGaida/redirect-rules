@@ -88,6 +88,21 @@ describe("autosave debounce", () => {
         vi.advanceTimersByTime(500);
         expect(store.dirty).toBe(false);
     });
+
+    it("goes idle when the timer fires on an already persisted state", () => {
+        reset();
+        makeValidChange();
+        schedule();
+
+        // * Another path persisted before the debounce fired (flush/close).
+        store.save();
+        expect(store.dirty).toBe(false);
+
+        vi.advanceTimersByTime(AUTOSAVE_DELAY_MS);
+        expect(autosave.phase).toBe("idle");
+        expect(autosave.pendingDelayMs).toBe(0);
+        expect(persistedRules()).toHaveLength(1);
+    });
 });
 
 describe("autosave pause gates (fail-safe)", () => {

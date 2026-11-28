@@ -1,0 +1,74 @@
+# ☰☰☰ E2E (Chromium) — same suite as Firefox against synthetic fixtures ☰☰☰
+# Own workflow so the README can show a dedicated Chromium E2E badge (ADR 0048).
+name: E2E (Chromium)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# * `contents: write` is used ONLY by the badge step and ONLY on main pushes; the
+# * badge JSON lives on the generated `badges` branch (ADR 0049), never on main.
+permissions:
+  contents: write
+
+jobs:
+  e2e:
+    name: e2e (Chromium, full suite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      # LABEL: run the suite (also writes test-results/playwright.json for the badge)
+      - run: npm run test:e2e:chromium
+      # LABEL: badge data — main pushes only, the README badge reflects main
+      - name: Write badge JSON
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        run: node scripts/e2e-badge.mjs test-results/playwright.json "E2E (Chromium)" badges/e2e-chromium.json
+      - name: Publish badge JSON
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          file="badges/e2e-chromium.json"
+          if ! gh api "repos/$repo/git/ref/heads/badges" >/dev/null 2>&1; then
+            gh api --method POST "repos/$repo/git/refs" \
+              -f ref=refs/heads/badges -f sha="$GITHUB_SHA" >/dev/null 2>&1 || true
+          fi
+          for attempt in 1 2 3; do
+            sha="$(gh api "repos/$repo/contents/$file?ref=badges" --jq .sha 2>/dev/null || true)"
+            args=(--method PUT "repos/$repo/contents/$file"
+              -f message="chore(badges): update $(basename "$file")"
+              -f branch=badges
+              -f content="$(base64 -w0 "$file")")
+            if [ -n "$sha" ]; then args+=(-f sha="$sha"); fi
+            if gh api "${args[@]}" >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::badge publish failed after 3 attempts"
+          exit 1
+      # LABEL: keep traces/screenshots and the JSON report when the suite fails
+      - name: Upload E2E artifacts (failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-chromium-artifacts
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -55,3 +55,6 @@ test-results/
 
 # Coverage artifacts (Vitest, generated)
 coverage/
+
+# E2E badge artifacts (generated, published to the `badges` branch by CI)
+badges/

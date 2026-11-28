@@ -18,11 +18,14 @@ export default defineConfig({
     test: {
         environment: "node",
         include: ["src/**/*.test.ts"],
+        // * Unit coverage measures TypeScript logic only (ADR 0048). Svelte
+        // * components are E2E-owned; rendering them here would need a component-test
+        // * stack the project intentionally does not carry.
         coverage: {
             provider: "v8",
             reporter: ["text", "json-summary", "html"],
             reportsDirectory: "coverage",
-            include: ["src/**/*.{ts,svelte}"],
+            include: ["src/**/*.ts"],
             exclude: ["src/**/__tests__/**", "src/**/*.d.ts", "src/lib/gui/i18n.keys.ts"],
         },
     },

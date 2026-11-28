@@ -52,6 +52,10 @@ describe("session snapshot after a failed boot read", () => {
         expect(setCalls).toBe(0);
         expect(gm.get(STORAGE_KEY)).toEqual(storedSettings);
 
+        // * The failed-read guard also blocks a direct save — defaults never land on disk.
+        expect(store.save()).toBe(false);
+        expect(setCalls).toBe(0);
+
         // * A successful refresh re-enables persistence and adopts the stored state.
         failRead = false;
         refreshFromStorage();
@@ -71,5 +75,21 @@ describe("session snapshot after a failed boot read", () => {
         expect(persisted.rules[0]?.siteRegex).toBe("/stored\\.test/");
         expect(persisted.rules[0]?.rules).toEqual(storedSettings.rules[0].rules);
         expect(setCalls).toBeGreaterThan(0);
+    });
+
+    it("keeps the live state and pauses autosave when a refresh read fails", () => {
+        const before = JSON.stringify(store.settings);
+        const writes = setCalls;
+
+        failRead = true;
+        refreshFromStorage();
+
+        expect(JSON.stringify(store.settings)).toBe(before);
+        expect(autosave.phase).toBe("paused");
+        expect(autosave.pausedReason).toBe("write");
+        expect(autosave.pendingDelayMs).toBe(0);
+        expect(setCalls).toBe(writes);
+
+        failRead = false;
     });
 });

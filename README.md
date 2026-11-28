@@ -4,7 +4,9 @@
 
 [![Version](https://img.shields.io/github/package-json/v/JanGaida/redirect-rules)](https://github.com/JanGaida/redirect-rules/releases)
 [![CI](https://github.com/JanGaida/redirect-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/JanGaida/redirect-rules/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=coverage&color=blue)](https://github.com/JanGaida/redirect-rules/releases)
+[![Unit coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FJanGaida%2Fredirect-rules%2Freleases%2Flatest%2Fdownload%2Fcoverage-summary.json&query=$.total.lines.pct&suffix=%25&label=unit%20coverage&color=blue)](https://github.com/JanGaida/redirect-rules/releases)
+[![E2E (Firefox)](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FJanGaida%2Fredirect-rules%2Fbadges%2Fe2e-firefox.json)](https://github.com/JanGaida/redirect-rules/actions/workflows/e2e-firefox.yml)
+[![E2E (Chromium)](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FJanGaida%2Fredirect-rules%2Fbadges%2Fe2e-chromium.json)](https://github.com/JanGaida/redirect-rules/actions/workflows/e2e-chromium.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 </div>
@@ -118,18 +120,18 @@ Rules:     removeQuery  si
 - Runs on `http(s)` at `document-start`; follows `pushState`/`popstate` (not `replaceState`).
 - No page UI, no telemetry; settings and stats stay in Tampermonkey storage. The dashboard fetches the host stub from GitHub raw and the Hack font from jsDelivr — static assets only.
 - Console `info` logs redirect URLs — use `warn`/`silent` to quiet it.
-- Tampermonkey and Firefox are the tested path; other managers and browsers are not covered.
+- Tampermonkey + Firefox are the supported path. Chromium runs the same E2E suite.
 - A bad regex runs synchronously and can block the page.
 
 ## 🧰 Tech stack
 
-| Tool                                                                                              | Purpose                                       | License    |
-| ------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------- |
-| [Svelte 5](https://svelte.dev/)                                                                   | Dashboard UI                                  | MIT        |
-| [TypeScript](https://www.typescriptlang.org/)                                                     | Type safety across the codebase               | Apache-2.0 |
-| [Vite](https://vitejs.dev/) + [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey) | Bundle the userscript and its metadata header | MIT        |
-| [Vitest](https://vitest.dev/)                                                                     | Unit tests                                    | MIT        |
-| [Playwright](https://playwright.dev/)                                                             | E2E tests and screenshot capture (Firefox)    | Apache-2.0 |
+| Tool                                                                                              | Purpose                                                | License    |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------- |
+| [Svelte 5](https://svelte.dev/)                                                                   | Dashboard UI                                           | MIT        |
+| [TypeScript](https://www.typescriptlang.org/)                                                     | Type safety across the codebase                        | Apache-2.0 |
+| [Vite](https://vitejs.dev/) + [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey) | Bundle the userscript and its metadata header          | MIT        |
+| [Vitest](https://vitest.dev/)                                                                     | Unit tests                                             | MIT        |
+| [Playwright](https://playwright.dev/)                                                             | E2E tests (Firefox + Chromium; screenshots on Firefox) | Apache-2.0 |
 
 ## 🛠️ Development
 
@@ -140,14 +142,17 @@ npm install
 npm run build        # → dist/redirect-rules.user.js
 npm run check        # svelte-check + tsc
 npm test             # Vitest
-npm run test:coverage # Vitest + line coverage → coverage/ (HTML report + json-summary, gitignored)
+npm run test:coverage # Vitest + TypeScript unit coverage → coverage/ (HTML report + json-summary, gitignored)
 npm run test:e2e     # Playwright (Firefox) — build first
+npm run test:e2e:chromium # Playwright (Chromium) — build first
 npm run screenshots  # regenerate README shots — build first
 ```
 
 Details: [CONTEXT.md](CONTEXT.md) · [architecture](docs/architecture/INDEX.md) · [changelog](CHANGELOG.md).
 
-CI runs `check`, `test` (incl. line coverage), `comments:check`, `css:check`, `docs:check`, `release:check`, `format:check`, `build`, plus E2E.
+CI runs `check`, `test` (incl. TypeScript unit coverage), `comments:check`, `css:check`, `docs:check`, `release:check`, `format:check`, `build`; E2E runs in dedicated Firefox and Chromium workflows.
+
+Coverage measures TypeScript logic; Svelte components are covered by the E2E suites.
 
 ## 📄 License
 

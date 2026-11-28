@@ -1,8 +1,10 @@
 # ADR 0004: Committed synthetic E2E fixtures — E2E runs in CI
 
-- Status: accepted (2026-10-25)
+- Status: accepted (2026-10-25) — amended 2026-11-28 (ADR 0048: E2E jobs moved to dedicated Firefox/Chromium workflows)
 - Deciders: project owner
-- Applies to: `e2e/helpers/fixture-server.ts`, `e2e/tests/*.spec.ts`, `.github/workflows/ci.yml`, `scripts/check-docs.mjs`
+- Applies to: `e2e/helpers/fixture-server.ts`, `e2e/tests/*.spec.ts`,
+  `.github/workflows/e2e-firefox.yml`, `.github/workflows/e2e-chromium.yml`,
+  `.github/workflows/ci.yml`, `scripts/check-docs.mjs`
 
 ## Context
 
@@ -18,8 +20,11 @@ Those are invisible to Vitest because they only exist at the browser-navigation 
 1. E2E fixture pages are HAND-BUILT static HTML (no captures, no personal data) served
    by a bare `node:http` fixture server on port 4184 (4174 is taken by the
    youtube-ui-tweaks setup — both run on the same dev machine).
-2. Fixtures are COMMITTED — so E2E runs in CI as its own job (build →
-   `npx playwright install firefox --with-deps` → `npm run test:e2e`), not local-only.
+2. Fixtures are COMMITTED — so E2E runs in CI, in dedicated workflows
+   (`.github/workflows/e2e-firefox.yml` required and
+   `.github/workflows/e2e-chromium.yml`; ADR 0048), not local-only.
+   Each workflow builds, installs its browser, and runs the same full suite; the
+   fixtures and the injection contract below are unchanged.
 3. The userscript + GM polyfill are both injected via `addInitScript`: unlike the
    youtube-ui-tweaks script, this boot never reads `documentElement`, so document-start
    injection is safe and the redirect-on-load case is testable as a REAL navigation.
@@ -49,5 +54,5 @@ encode nothing.
 
 - Fixture server: `e2e/helpers/fixture-server.ts`
 - Specs: `e2e/tests/` (redirect-on-load, no-match, spa-navigation, append-query, loop-guard, dashboard-smoke, group-enable, toast-undo, performance-mode)
-- CI wiring: `.github/workflows/ci.yml` (e2e job)
+- CI wiring: `.github/workflows/e2e-firefox.yml`, `.github/workflows/e2e-chromium.yml`
 - Related docs: `docs/architecture/testing.md`

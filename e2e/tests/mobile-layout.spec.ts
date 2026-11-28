@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openDashboardTab } from "../helpers/dashboard";
+import { openDashboardTab, unfoldMasterRule, unfoldMasterSiteGroup } from "../helpers/dashboard";
 import { injectUserscript, openFixtureWithUserscript } from "../helpers/userscript";
 
 /**
@@ -90,9 +90,10 @@ test("phone: the pane switch preserves editor state and scroll position", async 
     await expect(master).toBeVisible();
     await expect(preview).toBeHidden();
 
-    await dashboard.locator(".rr-master > details.rr-master-site > .rr-group-summary").first().click();
+    const firstSite = dashboard.locator(".rr-master > details.rr-master-site").first();
+    await unfoldMasterSiteGroup(firstSite);
     const firstRule = dashboard.locator(".rr-master .rr-master-rule").first();
-    await firstRule.locator("> .rr-master-rule-summary").click();
+    await unfoldMasterRule(firstRule);
 
     const substitution = firstRule.getByRole("textbox", { name: "With" });
     await substitution.fill("edited-while-on-rules.html");

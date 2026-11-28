@@ -803,3 +803,158 @@ describe("ruleProblem", () => {
         expect(ruleProblem({ kind: "replace", regex: "/delete-me/", substitution: "" })).toBeNull();
     });
 });
+
+describe("parseSettingsTransfer — rejected containers", () => {
+    it("rejects non-object JSON roots", () => {
+        for (const text of ['"text"', "5", "true", "[]", "null"]) {
+            expect(parseSettingsTransfer(text)).toMatchObject({ ok: false, error: { code: "structure" } });
+        }
+    });
+
+    it("rejects a v1 envelope without an object settings part or group list", () => {
+        expect(parseSettingsTransfer(envelope(true, 5, []))).toMatchObject({
+            ok: false,
+            error: { code: "structure" },
+        });
+        expect(
+            parseSettingsTransfer(
+                JSON.stringify({
+                    format: TRANSFER_FORMAT,
+                    version: TRANSFER_VERSION,
+                    settings: {},
+                    siteGroups: "x",
+                }),
+            ),
+        ).toMatchObject({ ok: false, error: { code: "structure" } });
+    });
+
+    it("rejects a legacy wrapper with a non-object settings part", () => {
+        expect(parseSettingsTransfer(JSON.stringify({ settings: 5 }))).toMatchObject({
+            ok: false,
+            error: { code: "structure" },
+        });
+    });
+
+    it("rejects a non-array rules value on any root shape", () => {
+        expect(parseSettingsTransfer(JSON.stringify({ settings: { rules: 5 } }))).toMatchObject({
+            ok: false,
+            error: { code: "structure" },
+        });
+        expect(parseSettingsTransfer(JSON.stringify({ locale: "en", rules: "x" }))).toMatchObject({
+            ok: false,
+            error: { code: "structure" },
+        });
+    });
+});
+
+describe("parseSettingsTransfer — group/rule edge shapes", () => {
+    it("marks a non-object group as structurally invalid", () => {
+        const parsed = mustParse(JSON.stringify({ rules: [5] }));
+        expect(parsed.siteGroups[0]).toMatchObject({ valid: false, problem: "structure", siteRegex: "" });
+    });
+
+    it("rejects a group without a gate", () => {
+        const parsed = mustParse(
+            JSON.stringify({ rules: [{ rules: [{ kind: "replace", regex: "/a/", substitution: "b" }] }] }),
+        );
+        expect(parsed.siteGroups[0]).toMatchObject({ valid: false, problem: "structure", gateValid: false });
+    });
+
+    it("rejects an empty or uncompilable gate", () => {
+        const empty = mustParse(
+            JSON.stringify({
+                rules: [{ siteRegex: "", rules: [{ kind: "replace", regex: "/a/", substitution: "b" }] }],
+            }),
+        );
+        expect(empty.siteGroups[0]).toMatchObject({ valid: false, problem: "empty" });
+
+        const invalid = mustParse(
+            JSON.stringify({
+                rules: [{ siteRegex: "/(/", rules: [{ kind: "replace", regex: "/a/", substitution: "b" }] }],
+            }),
+        );
+        expect(invalid.siteGroups[0]).toMatchObject({ valid: false, problem: "regex" });
+    });
+
+    it("marks a non-object v1 rule entry as structural", () => {
+        const parsed = mustParse(envelope(true, {}, [{ siteRegex: "/g/", rules: [5] }]));
+        expect(parsed.siteGroups[0].rules[0]).toMatchObject({ ruleIndex: -1, valid: false, problem: "structure" });
+    });
+});
+
+describe("export envelope — dangling selections", () => {
+    it("skips selections that point at missing groups or empty units", () => {
+        const exported = buildExportEnvelope(
+            makeSettings(),
+            {
+                fields: [],
+                groups: [
+                    { groupIndex: 99, meta: true, rules: [0] },
+                    { groupIndex: 0, meta: false, rules: [] },
+                ],
+            },
+            { appVersion: "1", exportedAt: "2026-01-01T00:00:00.000Z" },
+        );
+        expect(exported.siteGroups).toEqual([]);
+    });
+});
+
+describe("defaultMergeSelection — invalid units", () => {
+    it("skips invalid groups and invalid new-group metadata", () => {
+        const parsed = mustParse(
+            envelope(true, {}, [
+                {
+                    siteRegex: "/(/",
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/a/", substitution: "b" } }],
+                },
+                {
+                    siteRegex: "/bad-meta/",
+                    description: "no entries",
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/a/", substitution: "b" } }],
+                },
+                {
+                    siteRegex: "/ok/",
+                    description: "valid",
+                    previewEntries: [],
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/a/", substitution: "b" } }],
+                },
+            ]),
+        );
+        const selection = defaultMergeSelection(diffTransfer(makeSettings({ rules: [] }), parsed));
+
+        expect(selection.groups).toEqual([{ groupIndex: 2, meta: true, rules: [0] }]);
+    });
+});
+
+describe("applyMerge — skipped groups", () => {
+    it("ignores unselected and uncompilable-gate groups", () => {
+        const parsed = mustParse(
+            envelope(true, {}, [
+                {
+                    siteRegex: "/(/",
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/a/", substitution: "b" } }],
+                },
+                {
+                    siteRegex: "/ok/",
+                    rules: [{ ruleIndex: 0, rule: { kind: "replace", regex: "/a/", substitution: "b" } }],
+                },
+            ]),
+        );
+        const current = makeSettings({ rules: [] });
+
+        // * Group 0 is selected but has no valid gate; group 1 is not selected.
+        const none = applyMerge(current, parsed, {
+            fields: [],
+            groups: [{ groupIndex: 0, meta: false, rules: [0] }],
+        });
+        expect(none.rules).toEqual([]);
+
+        const added = applyMerge(current, parsed, {
+            fields: [],
+            groups: [{ groupIndex: 1, meta: false, rules: [0] }],
+        });
+        expect(added.rules).toEqual([
+            { siteRegex: "/ok/", rules: [{ kind: "replace", regex: "/a/", substitution: "b" }] },
+        ]);
+    });
+});

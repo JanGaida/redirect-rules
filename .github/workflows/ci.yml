@@ -1,10 +1,8 @@
 # ☰☰☰ CI — quality gates on every push/PR to main ☰☰☰
 # Job `gate`: the full local gate suite — typecheck (incl. tests), unit tests, comment
 #   gate, CSS gate, docs gate, release-config gate, format check, prod build.
-# Job `e2e`: behavioral tests in a real Firefox — synthetic fixture pages are committed
-#   (no privacy screening needed), so E2E runs in CI here (unlike youtube-ui-tweaks,
-#   where captured YouTube DOM must stay local — see ADR 0004).
 # Job `secrets`: gitleaks over the full history; read-only token, no PR comments.
+# E2E lives in dedicated workflows: e2e-firefox.yml and e2e-chromium.yml — see ADR 0048.
 
 name: CI
 
@@ -49,23 +47,6 @@ jobs:
       - run: npm run release:check
       - run: npm run format:check
       - run: npm run build
-
-  e2e:
-    name: e2e (Firefox, effective URL behavior)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      # LABEL: checkout + Node 22 with npm cache
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          cache: npm
-      # LABEL: build the artifact under test, then run the Playwright suite against it
-      - run: npm ci
-      - run: npm run build
-      - run: npx playwright install firefox --with-deps
-      - run: npm run test:e2e
 
   secrets:
     name: secret scan

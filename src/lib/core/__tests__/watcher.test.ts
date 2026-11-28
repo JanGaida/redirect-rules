@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     browserRuntime,
     createWatcher,
+    entryLoopKey,
     installSpaHook,
     LOOP_WINDOW_MS,
     type LoopEntry,
@@ -228,6 +229,41 @@ describe("browserRuntime — window.name loop state", () => {
         expect(window.name).not.toContain("old-path");
 
         window.name = "";
+    });
+});
+
+describe("browserRuntime — history sanitization", () => {
+    it("reads an empty or array window.name payload as an empty history", () => {
+        const runtime = browserRuntime();
+
+        window.name = "";
+        expect(runtime.readLoopHistory()).toEqual([]);
+
+        window.name = "[1,2]";
+        expect(runtime.readLoopHistory()).toEqual([]);
+
+        window.name = "";
+    });
+
+    it("drops malformed entries and clamps invalid timestamps", () => {
+        const runtime = browserRuntime();
+        window.name = JSON.stringify({ rrLoop: [null, 5, {}, { source: "" }, { key: "abc", ts: "bad" }] });
+
+        expect(runtime.readLoopHistory()).toEqual([{ key: "abc", ts: 0 }]);
+
+        window.name = "";
+    });
+});
+
+describe("entryLoopKey", () => {
+    it("hashes a legacy source and rejects entries without identity", () => {
+        expect(entryLoopKey({} as LoopEntry)).toBeNull();
+
+        const legacy = entryLoopKey(legacyEntry("not a url", 1));
+        expect(legacy).toMatch(/^[0-9a-f]{16}$/);
+        // * Unparsable URLs compare verbatim (stable hash, never a throw).
+        expect(entryLoopKey(legacyEntry("not a url", 2))).toBe(legacy);
+        expect(entryLoopKey(legacyEntry("other", 1))).not.toBe(legacy);
     });
 });
 

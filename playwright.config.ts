@@ -25,7 +25,9 @@ export default defineConfig({
     //   sequential page loads; serial avoids port contention noise for no real cost.
     workers: 1,
     timeout: 60000,
-    reporter: "list",
+    // * The JSON report feeds the pass-count badge (scripts/e2e-badge.mjs); it is
+    // * written on every run so CI and local runs produce the same input.
+    reporter: [["list"], ["json", { outputFile: "test-results/playwright.json" }]],
     use: {
         baseURL: `http://localhost:${FIXTURE_SERVER_PORT}`,
         trace: "on-first-retry",

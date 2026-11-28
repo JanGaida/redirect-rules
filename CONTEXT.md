@@ -27,8 +27,8 @@ vite-plugin-monkey** into a single `.user.js`.
 | CSS gate           | `npm run css:check` — `scripts/check-css.mjs` (declared-but-unreferenced classes, keyframes, `--rr-*` tokens); `--strict` fails on findings                                                                       |
 | Release gate       | `npm run release:check` — `scripts/check-release-config.mjs` (release-please wiring + version-mirror drift)                                                                                                       |
 | Format             | Prettier (4-space, double-quote) — `npm run format` / `format:check`                                                                                                                                              |
-| Test               | Vitest 4 (`node` + `jsdom` envs) — `npm run test`; line coverage: `npm run test:coverage`                                                                                                                         |
-| E2E                | Playwright (Firefox) against committed synthetic fixtures — `npm run test:e2e`                                                                                                                                    |
+| Test               | Vitest 4 (`node` + `jsdom` envs) — `npm run test`; TypeScript unit line coverage: `npm run test:coverage`                                                                                                         |
+| E2E                | Playwright (Firefox + Chromium) against committed synthetic fixtures                                                                                                                                              |
 
 ### Commands
 
@@ -36,8 +36,9 @@ vite-plugin-monkey** into a single `.user.js`.
 npm install          # install deps
 npm run check        # svelte-check + tsc — typecheck gate (must be green before commit; includes tests)
 npm test             # vitest run — engine, append-query, settings, watcher, store + ported legacy corpus
-npm run test:coverage # vitest + line coverage → coverage/ (HTML report + json-summary; gitignored)
-npm run test:e2e     # playwright test — effective URL behavior against local fixtures (needs `npm run build`)
+npm run test:coverage # vitest + TypeScript unit line coverage → coverage/ (HTML report + json-summary; gitignored)
+npm run test:e2e     # playwright test (Firefox) — effective URL behavior against local fixtures (needs `npm run build`)
+npm run test:e2e:chromium # playwright test --config playwright.chromium.config.ts (Chromium) — same suite (needs `npm run build`)
 npm run screenshots  # playwright screenshot config — regenerate assets/screenshots/*.png for the README (needs `npm run build`)
 npm run docs:check   # architecture-docs gate (sections, links, generated ADR table, footers)
 npm run docs:index   # regenerate the ADR table in docs/architecture/INDEX.md
@@ -100,7 +101,7 @@ src/
     │   ├── assistant-proposal.ts # parseAssistantProposal + resolveProposal (tolerant answer → strict transfer)
     │   ├── encoding.ts           # decodeText for build-time Base64 payloads
     │   ├── watcher.ts            # SPA hook, loop guard (window.name), location.replace, stats recording
-    │   └── __tests__/            # 21 vitest files + gm-stubs.ts
+    │   └── __tests__/            # unit suites + gm-stubs.ts
     ├── stores/
     │   └── settings.svelte.ts    # $state<Settings> singleton — single source of truth, prune-on-save
     └── gui/                      # Svelte 5 dashboard (hash-takeover tab, lazy via GM menu — ADR 0011/0012)
@@ -256,35 +257,51 @@ type SiteRule = {
 
 ## Testing
 
-- **Unit (node)**: pure logic incl. the ported legacy corpus (~115 cases,
-  `corpus.test.ts`), whitespace normalization (`parse-regex.test.ts`), preview
-  parity + substitution-expansion corpus (`preview.test.ts`), stats hash/sink
+- **Unit (node)**: pure logic incl. the ported legacy corpus
+  (`corpus.test.ts`), whitespace normalization (`parse-regex.test.ts`), rule-policy
+  emptiness/incompleteness/regex (`rule-policy.test.ts`), preview parity +
+  substitution-expansion corpus (`preview.test.ts`), stats hash/sink
   (`stats.test.ts`), logger level/payload/performance contract (`log.test.ts`),
-  dashboard protocol (marker/boot request — `dashboard-protocol.test.ts`), autosave gates
-    - session snapshot + remote-sync policy (`autosave.test.ts`), autosave speed mapping
-      (`autosave-speed.test.ts`), logLevel normalization (`settings.test.ts`), shipped-default
-        - group on/off pinning (`example-rules.test.ts`, `redirect-engine.test.ts`,
-          `validation.test.ts`, `autosave.test.ts`, `settings-transfer.test.ts`).
+  dashboard protocol (marker/boot request — `dashboard-protocol.test.ts`), autosave
+  gates + session snapshot + remote-sync policy (`autosave.test.ts`), autosave speed
+  mapping (`autosave-speed.test.ts`), logLevel normalization (`settings.test.ts`),
+  shipped-default + group on/off pinning (`example-rules.test.ts`,
+  `redirect-engine.test.ts`, `validation.test.ts`, `autosave.test.ts`,
+  `settings-transfer.test.ts`), token-reference key coverage and the inlined icon
+  registry (`token-reference-data.test.ts`, `icon.test.ts`).
 - **Integration (jsdom)**: watcher loop-guard (injectable runtime) + stats sink
-  recording/abort split, store CRUD.
-- **Coverage**: `npm run test:coverage` runs Vitest v8 over `src/**/*.{ts,svelte}`
-  (tests, ambient types, generated keys excluded) and writes the HTML report plus
-  the json-summary into the gitignored coverage directory. CI measures the same
-  scope in the gate without a threshold; components are unit-untested (0 %, E2E
-  covers them), so the aggregate is a gap signal. The release job attaches the
-  summary as a release asset, and the README chip reads its `total.lines.pct`
-  through a shields.io dynamic JSON badge (ADR 0047).
-- **E2E (Firefox, in CI)**: real navigations via CONTEXT-scoped addInitScript
-  injection against committed synthetic fixtures (ADR 0004); `dashboard-smoke.spec.ts`
+  recording/abort split, store CRUD, download (GM data URL + Blob fallback),
+  clipboard priority chain, autogrow, and the dashboard opener (`App.svelte`
+  mocked; mount/takeover stay E2E-only).
+- **Coverage**: `npm run test:coverage` runs Vitest v8 over `src/**/*.ts` only
+  (tests, ambient types, generated keys excluded); Svelte markup is E2E-owned and
+  leaves the denominator (ADR 0048). It writes the HTML report plus the
+  json-summary into the gitignored coverage directory. The aggregate is not
+  pinned here — the coverage report and the README chip carry the current value;
+  `main.ts` stays at 0 % (boot blind spot). CI measures the same scope in the
+  gate without a threshold — the badge is a gap signal, not a merge gate. The
+  release job attaches the summary as a release asset, and the `unit coverage`
+  README chip reads its `total.lines.pct` through a shields.io dynamic JSON badge
+  (ADR 0047).
+- **E2E (Firefox + Chromium, in CI)**: real navigations via CONTEXT-scoped addInitScript
+  injection against committed synthetic fixtures (ADR 0004); the same full suite
+  runs on Firefox and Chromium (ADR 0048) — no subset,
+  no browser skips. `dashboard-smoke.spec.ts`
   drives the REAL takeover tab (context page event) across all three tabs + the
   autosave round-trip, the speed pill + header countdown indicator, the close flush, the
   multi-dashboard sync (second tab, remote reload), the undo restore and group
   enable/disable (`group-enable.spec.ts`). Takeover caveats: provisional-
-  about:blank commit deferral, aborted `load` event.
+  about:blank commit deferral, aborted `load` event. Polyfill storage mirroring at
+  document-start, the `<details>` unfold helpers, and the popover
+  entry-transition settle are test-infra fixes; the `<details>` open-state fix in
+  `RulesTab.svelte` is production behavior.
+  The README E2E chips are pass-count badges (`passed/total`, 100 % green / ≥ 80 %
+  orange / else red) served by a shields endpoint from the generated `badges`
+  branch, written on main pushes only (ADR 0049).
 - **Manual**: Tampermonkey install, real-world rules, native `confirm()`/`beforeunload`
   dialogs, busy + strict-CSP site for the takeover wipe, multi-tab autosave
   conflicts on a real profile.
-- **Known CI gap**: both workflows run on Node 22 only, while `engines` allows
+- **Known CI gap**: all workflows run on Node 22 only, while `engines` allows
   `^20.19.0 || >=22.12.0` — Node 20 compatibility is not exercised by CI.
 
 ## Release Workflow
@@ -301,8 +318,12 @@ type SiteRule = {
   (`include-component-in-tag: false`).
 - Distribution is GitHub Releases only. The Terser-minified prod build is intentional;
   Greasy Fork is not supported because its code rules forbid minified bundles.
-- CI (`.github/workflows/ci.yml`): `gate` (check/test:coverage/comments:check/css:check/docs:check/release:check/format:check/build),
-  `e2e` (build → Playwright Firefox → test:e2e), and `secrets` (gitleaks over full history).
+- CI: `.github/workflows/ci.yml` runs `gate` (check/test:coverage/comments:check/css:check/docs:check/release:check/format:check/build)
+  and `secrets` (gitleaks over full history); E2E runs in dedicated workflows
+  `.github/workflows/e2e-firefox.yml` and `.github/workflows/e2e-chromium.yml`
+  (ADR 0048). Main pushes publish the pass-count JSON to the generated `badges`
+  branch for the README chips (ADR 0049); failures upload `test-results/`
+  (traces, screenshots, report) as artifacts.
 
 ## License
 

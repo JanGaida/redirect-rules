@@ -1,6 +1,6 @@
 # ADR 0047: Coverage badge data as a release asset — no third-party coverage service
 
-- Status: accepted (2026-11-22)
+- Status: accepted (2026-11-22) — amended 2026-11-28 (ADR 0048: TypeScript-only scope + E2E browser matrix)
 - Deciders: project owner
 - Applies to: `.github/workflows/ci.yml`, `.github/workflows/release-please.yml`,
   `vitest.config.ts`, `package.json`, `README.md`, `docs/architecture/testing.md`,
@@ -31,11 +31,12 @@ badge fetches GitHub release assets through their redirects
 ## Decision
 
 1. **Measure unit line coverage** with Vitest's V8 provider over
-   `src/**/*.{ts,svelte}` — tests, ambient `.d.ts` files, and the generated
-   `i18n.keys.ts` are excluded. No `coverage.thresholds` are configured: with Svelte
-   components in scope, every new untested component lowers the aggregate and must not
-   block a pull request. The CI `gate` job runs `npm run test:coverage` so the coverage
-   toolchain fails early, not first at release time.
+   `src/**/*.ts` — tests, ambient `.d.ts` files, and the generated
+   `i18n.keys.ts` are excluded. No `coverage.thresholds` are configured: the
+   badge is a gap signal, not a gate. The CI `gate` job runs
+   `npm run test:coverage` so the coverage toolchain fails early, not first at
+   release time. ADR 0048 narrows the measured scope from the original
+   `src/**/*.{ts,svelte}`; the release-asset mechanism below is unchanged.
 2. **Use the Vitest json-summary as the badge input.** The json-summary reporter
    already exposes `total.lines.pct`; no bespoke badge schema is generated, so the
    badge cannot drift from the measured value.
@@ -46,8 +47,8 @@ badge fetches GitHub release assets through their redirects
    block the userscript upload or its manual retry.
 4. **The README chip is a shields.io dynamic JSON badge** over
    `https://github.com/JanGaida/redirect-rules/releases/latest/download/coverage-summary.json`
-   with `query=$.total.lines.pct`, a `%` suffix, and a fixed informational (blue)
-   color. The endpoint badge is not used because shields blocks `github.com` for it.
+   with `query=$.total.lines.pct`, a `%` suffix, and a fixed blue color. The
+   endpoint badge is not used because shields blocks `github.com` for it.
    No account, token, branch push, or self-hosted service is involved; shields only
    renders the SVG.
 5. **Generated artifacts stay out of the repository and the format gate**: `coverage/`
@@ -73,8 +74,8 @@ exercise, while Playwright carries the behavioral coverage.
 - The badge updates per release, not per merge; it shows "not found" until the first
   release that carries the asset.
 - No per-pull-request diff coverage and no threshold enforcement.
-- Svelte components are unit-untested by construction (0 %), so the aggregate
-  understates the Playwright-covered UI.
+- Svelte components have no unit metric (ADR 0048 excludes them); their behavior is
+  covered only by the E2E suites.
 - The chip shows the raw two-decimal percentage and a fixed blue color; a value-based
   color band is unavailable because the endpoint badge blocks `github.com`.
 - A missed asset upload repairs itself only with the next release (no manual tag path

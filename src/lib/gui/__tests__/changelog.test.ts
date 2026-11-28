@@ -208,6 +208,13 @@ describe("renderChangelog", () => {
         expect(html).not.toContain("evil.com");
     });
 
+    it("rejects protocol-relative links and keeps same-origin paths", () => {
+        const html = render("## 1.0.0\n\nSee [local](/local/x) and [evil](//evil.test/x).");
+
+        expect(html).toContain('<a href="/local/x" target="_blank" rel="noreferrer">local</a>');
+        expect(html).toContain('<a href="#" target="_blank" rel="noreferrer">evil</a>');
+    });
+
     it("escapes link href ampersands exactly once", () => {
         const html = render("## 1.0.0\n\nSee [x](https://example.com/?a=1&b=2).");
 
@@ -255,5 +262,37 @@ describe("renderChangelog", () => {
         expect(html).toContain(">Aktuell</span>");
         expect(html).toContain('<time class="rr-changelog-date" datetime="2026-10-26">26. Okt. 2026</time>');
         expect(html).toContain("Bugfixes");
+    });
+});
+
+describe("changelog edge cases", () => {
+    it("does not treat a //-prefixed bullet text as a scope", () => {
+        const model = parseChangelog("## 1.0.0\n\n### Features\n\n- custom: //path/to/file");
+
+        expect(model.releases[0]?.groups[0]?.items[0]).toMatchObject({ scope: null });
+    });
+
+    it("keeps an extra level-1 heading inside a release as a paragraph", () => {
+        const model = parseChangelog("## 1.0.0\n\n# Extra\n");
+
+        expect(model.releases[0]?.paragraphs).toEqual(["# Extra"]);
+    });
+
+    it("drops a section heading without any bullets", () => {
+        const model = parseChangelog("## 1.0.0\n\n### Features\n\n### Bug Fixes\n\n- fixed");
+
+        expect(model.releases[0]?.groups.map((group) => group.type)).toEqual(["fix"]);
+    });
+
+    it("renders an unparsable release date verbatim", () => {
+        const html = render("## 1.0.0 (2026-99-99)\n\n- item");
+
+        expect(html).toContain("2026-99-99");
+    });
+
+    it("falls back to the raw date when the locale is invalid", () => {
+        const html = render("## 1.0.0 (2026-10-26)\n\n- item", "en_US");
+
+        expect(html).toContain('<time class="rr-changelog-date" datetime="2026-10-26">2026-10-26</time>');
     });
 });

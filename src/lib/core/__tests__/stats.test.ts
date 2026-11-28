@@ -82,6 +82,11 @@ describe("normalizeStats", () => {
         expect(out.total).toBe(0);
         expect(out.last).toBeNull();
     });
+
+    it("drops non-object counters and malformed last records", () => {
+        expect(normalizeStats({ total: "many", counts: "nope", last: "nope" })).toEqual(emptyStats());
+        expect(normalizeStats({ last: { from: "a" } }).last).toBeNull();
+    });
 });
 
 // * Fake deps — every write observable, the debounce manual (no timers).
@@ -245,5 +250,24 @@ describe("createStatsSink", () => {
         expect(counts[ruleHash("/site/", dead)]).toBeUndefined();
         // * total + last stay untouched by pruning (only counts shrink).
         expect(sink.snapshot().total).toBe(2);
+    });
+});
+
+describe("createStatsSink — subscribers", () => {
+    it("emits the current snapshot immediately and on every change", () => {
+        const sink = createStatsSink(fakeDeps());
+        const seen: Stats[] = [];
+        const unsubscribe = sink.subscribe((stats) => seen.push(stats));
+
+        expect(seen).toHaveLength(1);
+        expect(seen[0].total).toBe(0);
+
+        sink.record(applied("/site/", { kind: "replace", regex: "/a/", substitution: "b" }), "from", "to");
+        expect(seen).toHaveLength(2);
+        expect(seen[1].total).toBe(1);
+
+        unsubscribe();
+        sink.record(applied("/site/", { kind: "replace", regex: "/a/", substitution: "b" }), "from", "to");
+        expect(seen).toHaveLength(2);
     });
 });

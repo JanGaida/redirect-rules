@@ -364,4 +364,74 @@ describe("settings store", () => {
 
         resetStore();
     });
+
+    it("create-rule prefill degrades an unparsable url to an empty gate", () => {
+        resetStore();
+        expect(store.addSiteRuleFromUrl("not a url")).toEqual({ siteIndex: 0, ruleIndex: 0 });
+        expect(store.settings.rules[0].siteRegex).toBe("");
+        expect(store.settings.rules[0].previewEntries).toEqual([{ url: "not a url", testOutputUri: "" }]);
+
+        resetStore();
+    });
+
+    it("save() re-points lastSelection after pruning shifts the indexes", () => {
+        resetStore();
+        store.addSiteRule(); // * entirely empty group at index 0 — pruned on save
+        store.addSiteRule();
+        store.settings.rules[1].siteRegex = "/keep\\.test/";
+        store.addRule(1);
+        store.settings.rules[1].rules[0] = { kind: "replace", regex: "/a/", substitution: "b" };
+        store.settings.lastSelection = { siteIndex: 1, ruleIndex: 0 };
+
+        store.save();
+        expect(store.settings.lastSelection).toEqual({ siteIndex: 0, ruleIndex: 0 });
+
+        resetStore();
+    });
+
+    it("save() drops lastSelection when the selected unit is pruned", () => {
+        resetStore();
+        store.addSiteRule();
+        store.settings.rules[0].siteRegex = "/keep\\.test/";
+        store.addRule(0); // * empty replace rule — pruned, taking the empty group with it
+        store.settings.lastSelection = { siteIndex: 0, ruleIndex: 0 };
+
+        store.save();
+        expect(store.settings.lastSelection).toBeUndefined();
+
+        // * Dangling indexes are dropped too, never kept as stale state.
+        store.settings.lastSelection = { siteIndex: 9, ruleIndex: 0 };
+        store.save();
+        expect(store.settings.lastSelection).toBeUndefined();
+
+        resetStore();
+    });
+
+    it("preview entry CRUD: add, insert (clamped), clone (deep)", () => {
+        resetStore();
+        store.addSiteRule();
+        store.settings.rules[0].siteRegex = "/a\\.test/";
+        // * Reflect keeps TypeScript's declared shape intact while the legacy
+        // *   persisted form (no previewEntries key) is exercised at runtime.
+        Reflect.deleteProperty(store.settings.rules[0], "previewEntries");
+
+        store.addPreviewEntry(0, "https://a.test/x");
+        expect(store.settings.rules[0].previewEntries).toEqual([
+            { url: "https://a.test/x", testOutputUri: "", description: "" },
+        ]);
+
+        expect(store.insertPreviewEntry(0, 99, { url: "https://a.test/y", testOutputUri: "" })).toBe(1);
+        store.clonePreviewEntry(0, 0);
+        expect(store.settings.rules[0].previewEntries?.map((entry) => entry.url)).toEqual([
+            "https://a.test/x",
+            "https://a.test/x",
+            "https://a.test/y",
+        ]);
+
+        // * A missing list is re-created before the undo insert.
+        Reflect.deleteProperty(store.settings.rules[0], "previewEntries");
+        expect(store.insertPreviewEntry(0, 0, { url: "https://a.test/z", testOutputUri: "" })).toBe(0);
+
+        resetStore();
+    });
 });
