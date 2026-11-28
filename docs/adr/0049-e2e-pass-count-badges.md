@@ -43,9 +43,10 @@ Verified 2026-11-28: the shields endpoint badge fetches
 2. **Playwright's JSON report is the single input** (`test-results/playwright.json`,
    already gitignored). `passed = stats.expected + stats.flaky` (a flaky test did pass);
    `total = passed + stats.unexpected + stats.skipped`.
-3. **Thresholds:** `passed === total && total > 0` → `green`; ratio ≥ 0.8 → `orange`;
-   otherwise `red`. A missing or corrupt report is `0/0` red — a crashed run must never
-   look green.
+3. **Thresholds and palette:** `passed === total && total > 0` → `#28a745` (success);
+   ratio ≥ 0.8 → `#dbab09` (warning); otherwise `#cb2431` (failure) — GitHub's state
+   palette, so the E2E chips sit on the same green as the Actions badge. A missing or
+   corrupt report is `0/0` failure — a crashed run must never look green.
 4. **The badge is main-only.** The write steps run only for `push` to `main`; pull
    requests keep the normal E2E check status but never write badge data.
 5. **The write path is the Contents API on the `badges` branch**, created from the

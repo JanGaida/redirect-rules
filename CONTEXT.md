@@ -295,9 +295,9 @@ type SiteRule = {
   document-start, the `<details>` unfold helpers, and the popover
   entry-transition settle are test-infra fixes; the `<details>` open-state fix in
   `RulesTab.svelte` is production behavior.
-  The README E2E chips are pass-count badges (`passed/total`, 100 % green / ≥ 80 %
-  orange / else red) served by a shields endpoint from the generated `badges`
-  branch, written on main pushes only (ADR 0049).
+  The README E2E chips are pass-count badges (`passed/total`, 100 % `#28a745` / ≥ 80 %
+  `#dbab09` / else `#cb2431` — GitHub's state palette) served by a shields endpoint
+  from the generated `badges` branch, written on main pushes only (ADR 0049).
 - **Manual**: Tampermonkey install, real-world rules, native `confirm()`/`beforeunload`
   dialogs, busy + strict-CSP site for the takeover wipe, multi-tab autosave
   conflicts on a real profile.
